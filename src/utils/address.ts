@@ -42,7 +42,7 @@ export function evmAddressToHyperlane(address: string): string {
  * @param address - Solana base58 public key
  * @returns 32-byte hex string with 0x prefix
  */
-export function solanaAddressToHyperlane(address: string): string {
+export function solanaAddressToHyperlane(_address: string): string {
   // Solana addresses are already 32 bytes, just need to convert from base58
   // TODO: Implement base58 decoding
   // For now, assume it's already hex or needs @solana/web3.js

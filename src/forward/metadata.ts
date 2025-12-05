@@ -14,7 +14,7 @@ import type { HLToIBCParams, HLToHLParams } from './types.js';
  * @returns Serialized HLMetadata bytes
  */
 export function createHLMetadataForIBC(
-  params: HLToIBCParams
+  _params: HLToIBCParams
 ): Uint8Array {
   // TODO: Implement protobuf encoding
   // 1. Create MsgTransfer from params
@@ -22,9 +22,6 @@ export function createHLMetadataForIBC(
   // 3. Proto-encode HookForwardToIBC
   // 4. Create HLMetadata with hook_forward_to_ibc field
   // 5. Proto-encode HLMetadata
-
-  const _sourceChannel = params.sourceChannel;
-  const _receiver = params.receiver;
 
   // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
@@ -39,7 +36,7 @@ export function createHLMetadataForIBC(
  * @returns Serialized HLMetadata bytes
  */
 export function createHLMetadataForHL(
-  params: HLToHLParams
+  _params: HLToHLParams
 ): Uint8Array {
   // TODO: Implement protobuf encoding
   // 1. Create MsgRemoteTransfer from params.transfer
@@ -47,8 +44,6 @@ export function createHLMetadataForHL(
   // 3. Proto-encode HookForwardToHL
   // 4. Create HLMetadata with hook_forward_to_hl field
   // 5. Proto-encode HLMetadata
-
-  const _transfer = params.transfer;
 
   // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');

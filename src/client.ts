@@ -5,6 +5,8 @@
 import type { DymensionBridgeConfig, ResolvedConfig } from './config/types.js';
 import { createConfig } from './config/index.js';
 import type { FeeBreakdown } from './fees/index.js';
+import { createHubAdapter, type MsgExecuteContract } from './adapters/hub.js';
+import { HUB_WARP_ROUTES } from './config/constants.js';
 
 /**
  * Parameters for Hub to EVM chain transfers
@@ -15,7 +17,7 @@ export interface HubToEvmParams {
   recipient: string;
   amount: bigint;
   sender: string;
-  maxFee?: { denom: string; amount: string };
+  gasAmount?: bigint;
 }
 
 /**
@@ -52,9 +54,11 @@ export class BridgeClient {
   /**
    * Create unsigned transaction for Hub -> EVM transfer
    */
-  async populateHubToEvmTx(_params: HubToEvmParams): Promise<unknown> {
-    // TODO: Implement using CosmNativeHypCollateralAdapter
-    throw new Error('Not implemented');
+  async populateHubToEvmTx(params: HubToEvmParams): Promise<MsgExecuteContract> {
+    const warpRoutes = this.config.contractOverrides?.warpRoutes ?? HUB_WARP_ROUTES;
+    const hubAdapter = createHubAdapter(warpRoutes, this.config.network);
+
+    return hubAdapter.populateHubToEvmTx(params);
   }
 
   /**
