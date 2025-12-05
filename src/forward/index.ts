@@ -5,3 +5,11 @@
 export * from './memo.js';
 export * from './metadata.js';
 export * from './types.js';
+export {
+  encodeCompletionHookCall,
+  encodeHookForwardToHL,
+  encodeHookForwardToIBC,
+  encodeHLMetadata,
+  type MsgTransferFields,
+  type HLMetadataFields,
+} from './proto.js';
