@@ -49,6 +49,9 @@ export function createRollAppToHyperlaneMemo(
 export function createIBCToHyperlaneMemo(
   _params: IBCToHyperlaneParams
 ): string {
+  // TODO: Implement protobuf encoding
+  // Similar to RollApp memo but uses "on_completion" instead of "eibc.dym_on_completion"
+
   // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
 }
