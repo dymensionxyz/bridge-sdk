@@ -1,8 +1,8 @@
 /**
- * Kaspa-specific utilities
+ * Kaspa deposit payload serialization for Dymension bridge
  *
- * Kaspa has no smart contracts, so we can only construct the payload
- * that the user must include in their Kaspa transaction.
+ * Kaspa has no smart contracts, so we construct a complete Hyperlane message
+ * that the user must include in their Kaspa transaction to the escrow address.
  */
 
 import { KASPA, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
@@ -21,18 +21,18 @@ export interface KaspaDepositParams {
 }
 
 /**
- * Serialize a Kaspa deposit payload for bridging to Hub
+ * Serialize a complete Kaspa deposit payload for bridging to Dymension Hub
  *
- * The payload is the Hyperlane message body that will be included
- * in the Kaspa transaction sent to the escrow address.
+ * Creates a complete Hyperlane message containing:
+ * - Message header (version, nonce, origin, sender, destination, recipient)
+ * - TokenMessage body (recipient, amount, metadata)
  *
  * @param params - Deposit parameters
- * @returns Serialized payload bytes
+ * @returns Serialized Hyperlane message bytes
  */
 export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8Array {
   const { hubRecipient, amount, network = 'mainnet' } = params;
 
-  // Validate minimum deposit
   if (amount < KASPA.MIN_DEPOSIT_SOMPI) {
     throw new Error(
       `Minimum deposit is ${KASPA.MIN_DEPOSIT_SOMPI} sompi (${Number(KASPA.MIN_DEPOSIT_SOMPI) / Number(KASPA.SOMPI_PER_KAS)} KAS)`
@@ -42,46 +42,108 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
   const hubDomain = network === 'mainnet' ? DOMAINS.DYMENSION_MAINNET : DOMAINS.DYMENSION_TESTNET;
   const kaspaDomain = network === 'mainnet' ? DOMAINS.KASPA_MAINNET : DOMAINS.KASPA_TESTNET;
 
-  // Convert bech32 address to 32-byte hex
-  const recipientHex = cosmosAddressToHyperlane(hubRecipient);
+  const recipientH256 = cosmosAddressToHyperlane(hubRecipient);
+  const metadata = serializeEmptyHlMetadata();
+  const tokenMessageBody = serializeTokenMessage(recipientH256, amount, metadata);
 
-  // Construct the warp payload body (64 bytes)
-  // Format: 12 bytes padding + 20 bytes recipient + 32 bytes amount
-  const bodyBytes = serializeWarpPayloadBody(recipientHex, amount);
-
-  // Construct full Hyperlane message
-  // TODO: Full message construction with proper header
-  const _version = 3;
-  const _nonce = 1; // Placeholder
-  const _origin = kaspaDomain;
-  const _sender = '0x' + '0'.repeat(64); // Zeros for Kaspa
-  const _destination = hubDomain;
-  const _recipient = HUB_TOKEN_IDS.KAS;
-
-  // Placeholder - needs proper Hyperlane message serialization
-  return bodyBytes;
+  return serializeHyperlaneMessage({
+    version: 3,
+    nonce: 0,
+    origin: kaspaDomain,
+    sender: '0x' + '0'.repeat(64),
+    destination: hubDomain,
+    recipient: HUB_TOKEN_IDS.KAS,
+    body: tokenMessageBody,
+  });
 }
 
 /**
- * Serialize the warp payload body
+ * Serialize a TokenMessage (Hyperlane warp route format)
+ *
+ * Format:
+ * - 32 bytes: recipient (H256)
+ * - 32 bytes: amount (U256, big-endian)
+ * - N bytes: metadata (protobuf-encoded HlMetadata)
  */
-function serializeWarpPayloadBody(recipientHex: string, amount: bigint): Uint8Array {
-  // 64 bytes total: 12 padding + 20 recipient + 32 amount
-  const result = new Uint8Array(64);
+function serializeTokenMessage(
+  recipient: string,
+  amount: bigint,
+  metadata: Uint8Array
+): Uint8Array {
+  const recipientBytes = hexToBytes(recipient);
+  const amountBytes = u256ToBigEndian(amount);
 
-  // First 12 bytes: zero padding
-  result.fill(0, 0, 12);
-
-  // Next 20 bytes: recipient (last 20 bytes of 32-byte hex)
-  const recipientBytes = hexToBytes(recipientHex.slice(-40)); // Last 40 hex chars = 20 bytes
-  result.set(recipientBytes, 12);
-
-  // Last 32 bytes: amount as big-endian uint256
-  const amountHex = amount.toString(16).padStart(64, '0');
-  const amountBytes = hexToBytes(amountHex);
+  const result = new Uint8Array(64 + metadata.length);
+  result.set(recipientBytes, 0);
   result.set(amountBytes, 32);
+  result.set(metadata, 64);
 
   return result;
+}
+
+/**
+ * Serialize a Hyperlane message
+ *
+ * Format (77 + body.length bytes):
+ * - 1 byte: version
+ * - 4 bytes: nonce (big-endian u32)
+ * - 4 bytes: origin domain (big-endian u32)
+ * - 32 bytes: sender (H256)
+ * - 4 bytes: destination domain (big-endian u32)
+ * - 32 bytes: recipient (H256)
+ * - N bytes: body
+ */
+function serializeHyperlaneMessage(message: {
+  version: number;
+  nonce: number;
+  origin: number;
+  sender: string;
+  destination: number;
+  recipient: string;
+  body: Uint8Array;
+}): Uint8Array {
+  const result = new Uint8Array(77 + message.body.length);
+  let offset = 0;
+
+  result[offset++] = message.version;
+
+  const nonceBytes = u32ToBigEndian(message.nonce);
+  result.set(nonceBytes, offset);
+  offset += 4;
+
+  const originBytes = u32ToBigEndian(message.origin);
+  result.set(originBytes, offset);
+  offset += 4;
+
+  const senderBytes = hexToBytes(message.sender);
+  result.set(senderBytes, offset);
+  offset += 32;
+
+  const destinationBytes = u32ToBigEndian(message.destination);
+  result.set(destinationBytes, offset);
+  offset += 4;
+
+  const recipientBytes = hexToBytes(message.recipient);
+  result.set(recipientBytes, offset);
+  offset += 32;
+
+  result.set(message.body, offset);
+
+  return result;
+}
+
+/**
+ * Serialize an empty HlMetadata protobuf message
+ *
+ * HlMetadata has three fields (all repeated bytes):
+ * - kaspa (field 1)
+ * - hook_forward_to_hl (field 2)
+ * - hook_forward_to_ibc (field 3)
+ *
+ * Empty message = 0 bytes (all fields are optional/repeated and empty)
+ */
+function serializeEmptyHlMetadata(): Uint8Array {
+  return new Uint8Array(0);
 }
 
 /**
@@ -92,7 +154,7 @@ export function getKaspaEscrowAddress(network: 'mainnet' | 'testnet' = 'mainnet'
 }
 
 /**
- * Helper: convert hex string to bytes
+ * Convert hex string to bytes
  */
 function hexToBytes(hex: string): Uint8Array {
   const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
@@ -101,4 +163,24 @@ function hexToBytes(hex: string): Uint8Array {
     bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
   }
   return bytes;
+}
+
+/**
+ * Convert bigint to 32-byte big-endian representation (U256)
+ */
+function u256ToBigEndian(value: bigint): Uint8Array {
+  const hex = value.toString(16).padStart(64, '0');
+  return hexToBytes(hex);
+}
+
+/**
+ * Convert number to 4-byte big-endian representation (u32)
+ */
+function u32ToBigEndian(value: number): Uint8Array {
+  const result = new Uint8Array(4);
+  result[0] = (value >> 24) & 0xff;
+  result[1] = (value >> 16) & 0xff;
+  result[2] = (value >> 8) & 0xff;
+  result[3] = value & 0xff;
+  return result;
 }
