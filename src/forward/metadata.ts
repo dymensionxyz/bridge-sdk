@@ -23,8 +23,8 @@ export function createHLMetadataForIBC(
   // 4. Create HLMetadata with hook_forward_to_ibc field
   // 5. Proto-encode HLMetadata
 
-  const _sourceChannel = params.sourceChannel;
-  const _receiver = params.receiver;
+  void params.sourceChannel;
+  void params.receiver;
 
   // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
@@ -48,7 +48,7 @@ export function createHLMetadataForHL(
   // 4. Create HLMetadata with hook_forward_to_hl field
   // 5. Proto-encode HLMetadata
 
-  const _transfer = params.transfer;
+  void params.transfer;
 
   // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
