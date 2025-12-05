@@ -5,7 +5,7 @@
  * that the user must include in their Kaspa transaction.
  */
 
-import { KASPA, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { KASPA, DOMAINS } from '../config/constants.js';
 import { cosmosAddressToHyperlane } from '../utils/address.js';
 
 /**
@@ -51,14 +51,16 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
 
   // Construct full Hyperlane message
   // TODO: Full message construction with proper header
-  const _version = 3;
-  const _nonce = 1; // Placeholder
-  const _origin = kaspaDomain;
-  const _sender = '0x' + '0'.repeat(64); // Zeros for Kaspa
-  const _destination = hubDomain;
-  const _recipient = HUB_TOKEN_IDS.KAS;
+  // const _version = 3;
+  // const _nonce = 1;
+  // const _origin = kaspaDomain;
+  // const _sender = '0x' + '0'.repeat(64);
+  // const _destination = hubDomain;
+  // const _recipient = HUB_TOKEN_IDS.KAS;
 
   // Placeholder - needs proper Hyperlane message serialization
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void kaspaDomain, hubDomain;
   return bodyBytes;
 }
 
