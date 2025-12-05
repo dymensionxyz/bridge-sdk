@@ -47,6 +47,14 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
   const bodyBytes = serializeWarpPayloadBody(recipientHex, amount);
 
   // Construct full Hyperlane message
+  // TODO: Full message construction with proper header
+  const _version = 3;
+  const _nonce = 1; // Placeholder
+  const _origin = kaspaDomain;
+  const _sender = '0x' + '0'.repeat(64); // Zeros for Kaspa
+  const _destination = hubDomain;
+  const _recipient = HUB_TOKEN_IDS.KAS;
+
   // Placeholder - needs proper Hyperlane message serialization
   return bodyBytes;
 }
