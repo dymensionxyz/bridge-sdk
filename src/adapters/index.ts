@@ -3,3 +3,4 @@
  */
 
 export * from './kaspa.js';
+export * from './solana.js';

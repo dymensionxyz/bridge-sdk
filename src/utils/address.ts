@@ -43,10 +43,13 @@ export function evmAddressToHyperlane(address: string): string {
  * @returns 32-byte hex string with 0x prefix
  */
 export function solanaAddressToHyperlane(address: string): string {
-  // Solana addresses are already 32 bytes, just need to convert from base58
-  // TODO: Implement base58 decoding
-  // For now, assume it's already hex or needs @solana/web3.js
-  throw new Error('Not implemented: requires @solana/web3.js for base58 decoding');
+  try {
+    const { PublicKey } = require('@solana/web3.js');
+    const pubkey = new PublicKey(address);
+    return '0x' + Buffer.from(pubkey.toBytes()).toString('hex');
+  } catch (error) {
+    throw new Error(`Invalid Solana address: ${address}`);
+  }
 }
 
 /**
