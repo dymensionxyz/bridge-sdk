@@ -46,6 +46,13 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
   // Format: 12 bytes padding + 20 bytes recipient + 32 bytes amount
   const bodyBytes = serializeWarpPayloadBody(recipientHex, amount);
 
+  // Construct full Hyperlane message
+  // TODO: Full message construction with proper header
+  void kaspaDomain;
+  void hubDomain;
+  void HUB_TOKEN_IDS.KAS;
+
+  // Placeholder - needs proper Hyperlane message serialization
   return bodyBytes;
 }
 
