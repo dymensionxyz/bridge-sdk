@@ -3,6 +3,8 @@
  *
  * This demonstrates the multi-hop route:
  * RollApp --[IBC+EIBC]--> Hub --[Hyperlane]--> Ethereum
+ *
+ * Run with: npx ts-node examples/rollapp-to-ethereum.ts
  */
 
 import {
@@ -10,7 +12,7 @@ import {
   evmAddressToHyperlane,
   DOMAINS,
   HUB_TOKEN_IDS,
-} from '@dymension/bridge-sdk';
+} from '../src/index.js';
 
 async function main() {
   const client = createBridgeClient();

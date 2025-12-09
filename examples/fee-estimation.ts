@@ -1,5 +1,7 @@
 /**
  * Example: Fee estimation for various routes
+ *
+ * Run with: npx ts-node examples/fee-estimation.ts
  */
 
 import {
@@ -8,7 +10,7 @@ import {
   calculateEibcWithdrawal,
   DEFAULT_GAS_AMOUNTS,
   DOMAINS,
-} from '@dymension/bridge-sdk';
+} from '../src/index.js';
 
 async function main() {
   const client = createBridgeClient();
