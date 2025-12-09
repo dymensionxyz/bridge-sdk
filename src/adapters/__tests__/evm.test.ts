@@ -39,7 +39,7 @@ describe('EVM Adapter', () => {
       const params = {
         sourceChain: 'ethereum' as const,
         tokenAddress: ETHEREUM_CONTRACTS.ETH_WARP,
-        recipient: 'dym1abcdefghijklmnopqrstuvwxyz1234567890ab',
+        recipient: 'dym1qy352euf40x77qfrg4ncn27dauqjx3t8mmy9js',
         amount: 1000000000000000000n,
         sender: '0x1234567890123456789012345678901234567890',
       };
@@ -56,7 +56,7 @@ describe('EVM Adapter', () => {
       const params = {
         sourceChain: 'base' as const,
         tokenAddress: BASE_CONTRACTS.DYM_WARP,
-        recipient: 'dym1abcdefghijklmnopqrstuvwxyz1234567890ab',
+        recipient: 'dym1qy352euf40x77qfrg4ncn27dauqjx3t8mmy9js',
         amount: 1000000000000000000n,
         sender: '0x1234567890123456789012345678901234567890',
       };
@@ -70,7 +70,7 @@ describe('EVM Adapter', () => {
       const params = {
         sourceChain: 'bsc' as const,
         tokenAddress: BSC_CONTRACTS.KAS_WARP,
-        recipient: 'dym1abcdefghijklmnopqrstuvwxyz1234567890ab',
+        recipient: 'dym1qy352euf40x77qfrg4ncn27dauqjx3t8mmy9js',
         amount: 1000000000000000000n,
         sender: '0x1234567890123456789012345678901234567890',
       };
@@ -98,7 +98,7 @@ describe('EVM Adapter', () => {
       const params = {
         sourceChain: 'ethereum' as const,
         tokenAddress: ETHEREUM_CONTRACTS.ETH_WARP,
-        recipient: 'dym1abcdefghijklmnopqrstuvwxyz1234567890ab',
+        recipient: 'dym1qy352euf40x77qfrg4ncn27dauqjx3t8mmy9js',
         amount: 1000000000000000000n,
         sender: '0x1234567890123456789012345678901234567890',
         rpcUrl: 'https://custom-rpc.example.com',
