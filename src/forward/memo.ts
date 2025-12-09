@@ -3,7 +3,6 @@
  */
 
 import type { RollAppToHyperlaneParams, IBCToHyperlaneParams } from './types.js';
-import { HOOK_NAMES } from './types.js';
 
 /**
  * Creates EIBC memo for RollApp -> Hub -> Hyperlane forwarding
@@ -20,7 +19,7 @@ import { HOOK_NAMES } from './types.js';
  * @returns JSON memo string to include in IBC MsgTransfer
  */
 export function createRollAppToHyperlaneMemo(
-  params: RollAppToHyperlaneParams
+  _params: RollAppToHyperlaneParams
 ): string {
   // TODO: Implement protobuf encoding
   // 1. Create MsgRemoteTransfer from params.transfer
@@ -31,9 +30,7 @@ export function createRollAppToHyperlaneMemo(
   // 6. Base64 encode
   // 7. Create final memo JSON
 
-  void params;
-  void HOOK_NAMES.ROLL_TO_HL;
-
+  // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
 }
 
@@ -50,12 +47,11 @@ export function createRollAppToHyperlaneMemo(
  * @returns JSON memo string to include in IBC MsgTransfer
  */
 export function createIBCToHyperlaneMemo(
-  params: IBCToHyperlaneParams
+  _params: IBCToHyperlaneParams
 ): string {
   // TODO: Implement protobuf encoding
   // Similar to RollApp memo but uses "on_completion" instead of "eibc.dym_on_completion"
 
-  void params;
-
+  // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
 }
