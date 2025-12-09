@@ -16,7 +16,7 @@ import {
 } from '@solana/web3.js';
 import { getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { DOMAINS, SOLANA } from '../config/constants.js';
-import { solanaAddressToHyperlane } from '../utils/address.js';
+import { cosmosAddressToHyperlane } from '../utils/address.js';
 
 const SEALEVEL_SPL_NOOP_ADDRESS = 'noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV';
 
@@ -61,7 +61,8 @@ export async function buildSolanaToHubTx(params: SolanaToHubParams): Promise<Tra
   const senderPubKey = new PublicKey(sender);
   const hubDomain = network === 'mainnet' ? DOMAINS.DYMENSION_MAINNET : DOMAINS.DYMENSION_TESTNET;
 
-  const recipientHex = solanaAddressToHyperlane(recipient);
+  // Recipient is a Cosmos address on the Hub, convert it to Hyperlane format
+  const recipientHex = cosmosAddressToHyperlane(recipient);
   const recipientBytes = hexToBytes(recipientHex);
 
   const randomWallet = Keypair.generate();

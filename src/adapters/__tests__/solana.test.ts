@@ -43,7 +43,7 @@ describe('Solana Adapter', () => {
     it('should build transaction with correct structure', async () => {
       const params = {
         tokenProgramId: 'So11111111111111111111111111111111111111112',
-        recipient: 'dym1pgzph9rze2j2xxavx4n7pdhxlmgqk7g8gm8jdk',
+        recipient: 'dym1g8sf7w4cz5gtupa6y62h3q6a4gjv37pgefnpt5',
         amount: 1000000n,
         sender: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
         network: 'mainnet' as const,
@@ -62,7 +62,7 @@ describe('Solana Adapter', () => {
     it('should include compute budget instructions', async () => {
       const params = {
         tokenProgramId: 'So11111111111111111111111111111111111111112',
-        recipient: 'dym1pgzph9rze2j2xxavx4n7pdhxlmgqk7g8gm8jdk',
+        recipient: 'dym1g8sf7w4cz5gtupa6y62h3q6a4gjv37pgefnpt5',
         amount: 1000000n,
         sender: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
         network: 'testnet' as const,
