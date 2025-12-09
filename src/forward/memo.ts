@@ -31,10 +31,9 @@ export function createRollAppToHyperlaneMemo(
   // 6. Base64 encode
   // 7. Create final memo JSON
 
+  void params;
   void HOOK_NAMES.ROLL_TO_HL;
-  void params.eibcFee;
 
-  // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
 }
 
@@ -56,8 +55,7 @@ export function createIBCToHyperlaneMemo(
   // TODO: Implement protobuf encoding
   // Similar to RollApp memo but uses "on_completion" instead of "eibc.dym_on_completion"
 
-  void params.transfer;
+  void params;
 
-  // Placeholder until protobuf encoding is implemented
   throw new Error('Not implemented: requires protobuf encoding');
 }
