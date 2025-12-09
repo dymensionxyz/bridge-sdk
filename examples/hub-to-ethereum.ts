@@ -1,8 +1,10 @@
 /**
  * Example: Bridge from Dymension Hub to Ethereum
+ *
+ * Run with: npx ts-node examples/hub-to-ethereum.ts
  */
 
-import { createBridgeClient, DOMAINS, HUB_TOKEN_IDS } from '@dymension/bridge-sdk';
+import { createBridgeClient, DOMAINS, HUB_TOKEN_IDS } from '../src/index.js';
 
 async function main() {
   // Create client with defaults (uses mainnet public RPCs)

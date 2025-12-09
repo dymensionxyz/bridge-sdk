@@ -55,9 +55,30 @@ export {
   solanaAddressToHyperlane,
 } from './utils/address.js';
 
-// Kaspa adapter
+// Adapters
 export {
+  // Hub adapter (class-based)
+  HubAdapter,
+  createHubAdapter,
+  getMainnetWarpRoutes,
+  // EVM adapter (function-based)
+  populateEvmToHubTransfer,
+  getEvmTokenContract,
+  estimateEvmToHubGas,
+  // Solana adapter (function-based)
+  buildSolanaToHubTx,
+  getSolanaWarpProgramId,
+  deriveAssociatedTokenAccount,
+  // Kaspa utilities
   serializeKaspaDepositPayload,
   getKaspaEscrowAddress,
 } from './adapters/index.js';
-export type { KaspaDepositParams } from './adapters/index.js';
+export type {
+  KaspaDepositParams,
+  HubToEvmParams,
+  WarpRouteAddresses,
+  MsgExecuteContract,
+  EvmToHubTransferParams,
+  SolanaToHubParams,
+  HubToSolanaParams,
+} from './adapters/index.js';

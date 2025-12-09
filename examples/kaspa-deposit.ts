@@ -3,13 +3,15 @@
  *
  * Kaspa has no smart contracts, so we only construct the payload.
  * The user must create the full Kaspa transaction using their wallet.
+ *
+ * Run with: npx ts-node examples/kaspa-deposit.ts
  */
 
 import {
   serializeKaspaDepositPayload,
   getKaspaEscrowAddress,
   KASPA,
-} from '@dymension/bridge-sdk';
+} from '../src/index.js';
 
 async function main() {
   const amount = 500n * KASPA.SOMPI_PER_KAS; // 500 KAS in sompi
