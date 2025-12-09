@@ -84,3 +84,25 @@ export const SOLANA = {
  * Hub mailbox address (32-byte hex)
  */
 export const HUB_MAILBOX = '0x68797065726c616e650000000000000000000000000000000000000000000000';
+
+/**
+ * Hub warp route contract addresses (mainnet)
+ */
+export const HUB_WARP_ROUTES = {
+  [HUB_TOKEN_IDS.DYM]: 'dym1placeholder_dym_warp_route',
+  [HUB_TOKEN_IDS.ETH]: 'dym1placeholder_eth_warp_route',
+  [HUB_TOKEN_IDS.KAS]: 'dym1placeholder_kas_warp_route',
+} as const;
+
+/**
+ * Default IGP gas amounts by destination domain
+ */
+export const DEFAULT_IGP_GAS = {
+  [DOMAINS.ETHEREUM]: 150_000n,
+  [DOMAINS.BASE]: 100_000n,
+  [DOMAINS.BSC]: 100_000n,
+  [DOMAINS.SOLANA_MAINNET]: 200_000n,
+  [DOMAINS.SOLANA_TESTNET]: 200_000n,
+  [DOMAINS.KASPA_MAINNET]: 100_000n,
+  [DOMAINS.KASPA_TESTNET]: 100_000n,
+} as const;
