@@ -5,7 +5,7 @@
  * that the user must include in their Kaspa transaction.
  */
 
-import { KASPA } from '../config/constants.js';
+import { KASPA, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
 import { cosmosAddressToHyperlane } from '../utils/address.js';
 
 /**
@@ -30,7 +30,7 @@ export interface KaspaDepositParams {
  * @returns Serialized payload bytes
  */
 export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8Array {
-  const { hubRecipient, amount } = params;
+  const { hubRecipient, amount, network = 'mainnet' } = params;
 
   // Validate minimum deposit
   if (amount < KASPA.MIN_DEPOSIT_SOMPI) {
@@ -38,6 +38,9 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
       `Minimum deposit is ${KASPA.MIN_DEPOSIT_SOMPI} sompi (${Number(KASPA.MIN_DEPOSIT_SOMPI) / Number(KASPA.SOMPI_PER_KAS)} KAS)`
     );
   }
+
+  const hubDomain = network === 'mainnet' ? DOMAINS.DYMENSION_MAINNET : DOMAINS.DYMENSION_TESTNET;
+  const kaspaDomain = network === 'mainnet' ? DOMAINS.KASPA_MAINNET : DOMAINS.KASPA_TESTNET;
 
   // Convert bech32 address to 32-byte hex
   const recipientHex = cosmosAddressToHyperlane(hubRecipient);
@@ -47,8 +50,10 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
   const bodyBytes = serializeWarpPayloadBody(recipientHex, amount);
 
   // Construct full Hyperlane message
-  // TODO: Full message construction with proper header (version, nonce, origin, sender, destination, recipient)
-  // TODO: Use domain IDs based on network parameter
+  // TODO: Full message construction with proper header
+  void kaspaDomain;
+  void hubDomain;
+  void HUB_TOKEN_IDS.KAS;
 
   // Placeholder - needs proper Hyperlane message serialization
   return bodyBytes;
