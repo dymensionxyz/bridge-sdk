@@ -34,6 +34,28 @@ export interface EvmToHubParams {
 }
 
 /**
+ * Parameters for Solana to Hub transfers
+ */
+export interface SolanaToHubParams {
+  tokenProgramId: string;
+  recipient: string;
+  amount: bigint;
+  sender: string;
+  rpcUrl: string;
+}
+
+/**
+ * Parameters for Hub to Solana transfers
+ */
+export interface HubToSolanaParams {
+  tokenId: string;
+  recipient: string;
+  amount: bigint;
+  sender: string;
+  maxFee?: { denom: string; amount: string };
+}
+
+/**
  * Parameters for fee estimation
  */
 export interface EstimateFeesParams {
@@ -66,9 +88,28 @@ export class BridgeClient {
   /**
    * Create unsigned transaction for Hub -> Solana transfer
    */
-  async populateHubToSolanaTx(_params: HubToEvmParams): Promise<unknown> {
-    // TODO: Implement
-    throw new Error('Not implemented');
+  async populateHubToSolanaTx(params: HubToSolanaParams): Promise<unknown> {
+    const { tokenId, recipient, amount, sender, maxFee } = params;
+
+    const solanaDomain = this.config.network === 'mainnet'
+      ? 1399811149
+      : 1399811150;
+
+    return {
+      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+      value: {
+        sender,
+        contract: tokenId,
+        msg: Buffer.from(JSON.stringify({
+          transfer_remote: {
+            dest_domain: solanaDomain,
+            recipient,
+            amount: amount.toString(),
+          },
+        })),
+        funds: maxFee ? [maxFee] : [],
+      },
+    };
   }
 
   /**
@@ -90,9 +131,13 @@ export class BridgeClient {
   /**
    * Create unsigned transaction for Solana -> Hub transfer
    */
-  async populateSolanaToHubTx(_params: unknown): Promise<unknown> {
-    // TODO: Implement using SealevelHypTokenAdapter
-    throw new Error('Not implemented');
+  async populateSolanaToHubTx(params: SolanaToHubParams): Promise<unknown> {
+    const { buildSolanaToHubTx } = await import('./adapters/solana.js');
+    const network = this.config.network || 'mainnet';
+    return buildSolanaToHubTx({
+      ...params,
+      network,
+    });
   }
 
   /**
