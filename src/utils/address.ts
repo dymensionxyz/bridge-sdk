@@ -6,6 +6,7 @@
  */
 
 import { fromBech32 } from '@cosmjs/encoding';
+import { PublicKey } from '@solana/web3.js';
 
 /**
  * Convert a Cosmos bech32 address to Hyperlane 32-byte hex format
@@ -44,10 +45,9 @@ export function evmAddressToHyperlane(address: string): string {
  */
 export function solanaAddressToHyperlane(address: string): string {
   try {
-    const { PublicKey } = require('@solana/web3.js');
     const pubkey = new PublicKey(address);
     return '0x' + Buffer.from(pubkey.toBytes()).toString('hex');
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid Solana address: ${address}`);
   }
 }
