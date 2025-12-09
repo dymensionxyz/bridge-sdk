@@ -3,6 +3,12 @@
  */
 
 import type { HLToIBCParams, HLToHLParams } from './types.js';
+import {
+  encodeHookForwardToIBC,
+  encodeHookForwardToHL,
+  encodeHLMetadata,
+  type MsgTransferFields,
+} from './proto.js';
 
 /**
  * Creates HLMetadata for Hyperlane -> Hub -> IBC forwarding
@@ -14,17 +20,32 @@ import type { HLToIBCParams, HLToHLParams } from './types.js';
  * @returns Serialized HLMetadata bytes
  */
 export function createHLMetadataForIBC(
-  _params: HLToIBCParams
+  params: HLToIBCParams
 ): Uint8Array {
-  // TODO: Implement protobuf encoding
-  // 1. Create MsgTransfer from params
-  // 2. Wrap in HookForwardToIBC
-  // 3. Proto-encode HookForwardToIBC
-  // 4. Create HLMetadata with hook_forward_to_ibc field
-  // 5. Proto-encode HLMetadata
+  const msgTransfer: MsgTransferFields = {
+    sourcePort: 'transfer',
+    sourceChannel: params.sourceChannel,
+    token: {
+      denom: params.token.denom,
+      amount: params.token.amount,
+    },
+    sender: params.sender,
+    receiver: params.receiver,
+    timeoutHeight: params.timeoutHeight || {
+      revisionNumber: BigInt(0),
+      revisionHeight: BigInt(0),
+    },
+    timeoutTimestamp: params.timeoutTimestamp,
+    memo: params.memo,
+  };
 
-  // Placeholder until protobuf encoding is implemented
-  throw new Error('Not implemented: requires protobuf encoding');
+  const hookForwardToIBC = encodeHookForwardToIBC(msgTransfer);
+
+  const hlMetadata = encodeHLMetadata({
+    hookForwardToIbc: hookForwardToIBC,
+  });
+
+  return hlMetadata;
 }
 
 /**
@@ -36,15 +57,13 @@ export function createHLMetadataForIBC(
  * @returns Serialized HLMetadata bytes
  */
 export function createHLMetadataForHL(
-  _params: HLToHLParams
+  params: HLToHLParams
 ): Uint8Array {
-  // TODO: Implement protobuf encoding
-  // 1. Create MsgRemoteTransfer from params.transfer
-  // 2. Wrap in HookForwardToHL
-  // 3. Proto-encode HookForwardToHL
-  // 4. Create HLMetadata with hook_forward_to_hl field
-  // 5. Proto-encode HLMetadata
+  const hookForwardToHL = encodeHookForwardToHL(params.transfer);
 
-  // Placeholder until protobuf encoding is implemented
-  throw new Error('Not implemented: requires protobuf encoding');
+  const hlMetadata = encodeHLMetadata({
+    hookForwardToHl: hookForwardToHL,
+  });
+
+  return hlMetadata;
 }

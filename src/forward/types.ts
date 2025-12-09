@@ -49,7 +49,10 @@ export interface IBCToHyperlaneParams {
  */
 export interface HLToIBCParams {
   sourceChannel: string;
+  sender: string;
   receiver: string;
+  token: { denom: string; amount: string };
+  timeoutHeight?: { revisionNumber: bigint; revisionHeight: bigint };
   timeoutTimestamp: bigint;
   memo?: string;
 }

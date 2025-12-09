@@ -2,7 +2,13 @@
  * Memo construction for IBC-based forwarding
  */
 
+import { toBase64 } from '@cosmjs/encoding';
 import type { RollAppToHyperlaneParams, IBCToHyperlaneParams } from './types.js';
+import { HOOK_NAMES } from './types.js';
+import {
+  encodeCompletionHookCall,
+  encodeHookForwardToHL,
+} from './proto.js';
 
 /**
  * Creates EIBC memo for RollApp -> Hub -> Hyperlane forwarding
@@ -15,23 +21,33 @@ import type { RollAppToHyperlaneParams, IBCToHyperlaneParams } from './types.js'
  *   }
  * }
  *
+ * The CompletionHookCall contains:
+ * - name: hook name (HOOK_NAMES.ROLL_TO_HL)
+ * - data: proto-encoded HookForwardToHL
+ *
  * @param params - Forwarding parameters
  * @returns JSON memo string to include in IBC MsgTransfer
  */
 export function createRollAppToHyperlaneMemo(
-  _params: RollAppToHyperlaneParams
+  params: RollAppToHyperlaneParams
 ): string {
-  // TODO: Implement protobuf encoding
-  // 1. Create MsgRemoteTransfer from params.transfer
-  // 2. Wrap in HookForwardToHL
-  // 3. Proto-encode HookForwardToHL
-  // 4. Create CompletionHookCall with name and data
-  // 5. Proto-encode CompletionHookCall
-  // 6. Base64 encode
-  // 7. Create final memo JSON
+  const hookForwardToHL = encodeHookForwardToHL(params.transfer);
 
-  // Placeholder until protobuf encoding is implemented
-  throw new Error('Not implemented: requires protobuf encoding');
+  const completionHookCall = encodeCompletionHookCall(
+    HOOK_NAMES.ROLL_TO_HL,
+    hookForwardToHL
+  );
+
+  const completionHookBase64 = toBase64(completionHookCall);
+
+  const memo = {
+    eibc: {
+      fee: params.eibcFee,
+      dym_on_completion: completionHookBase64,
+    },
+  };
+
+  return JSON.stringify(memo);
 }
 
 /**
@@ -47,11 +63,20 @@ export function createRollAppToHyperlaneMemo(
  * @returns JSON memo string to include in IBC MsgTransfer
  */
 export function createIBCToHyperlaneMemo(
-  _params: IBCToHyperlaneParams
+  params: IBCToHyperlaneParams
 ): string {
-  // TODO: Implement protobuf encoding
-  // Similar to RollApp memo but uses "on_completion" instead of "eibc.dym_on_completion"
+  const hookForwardToHL = encodeHookForwardToHL(params.transfer);
 
-  // Placeholder until protobuf encoding is implemented
-  throw new Error('Not implemented: requires protobuf encoding');
+  const completionHookCall = encodeCompletionHookCall(
+    HOOK_NAMES.ROLL_TO_HL,
+    hookForwardToHL
+  );
+
+  const completionHookBase64 = toBase64(completionHookCall);
+
+  const memo = {
+    on_completion: completionHookBase64,
+  };
+
+  return JSON.stringify(memo);
 }
