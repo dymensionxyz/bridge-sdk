@@ -3,9 +3,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Contract } from 'ethers';
 import { populateEvmToHubTransfer, getEvmTokenContract, estimateEvmToHubGas } from '../evm.js';
-import { ETHEREUM_CONTRACTS, BASE_CONTRACTS, BSC_CONTRACTS, DOMAINS } from '../../config/constants.js';
+import { ETHEREUM_CONTRACTS, BASE_CONTRACTS, BSC_CONTRACTS } from '../../config/constants.js';
 
 vi.mock('ethers', async () => {
   const actual = await vi.importActual('ethers');
