@@ -51,3 +51,15 @@ export {
   serializeKaspaDepositPayload,
   getKaspaEscrowAddress,
 } from './adapters/index.js';
+
+// EVM adapter
+export {
+  populateEvmToHubTransfer,
+  getEvmTokenContract,
+} from './adapters/index.js';
+export type {
+  EvmChain,
+  EvmToken,
+  EvmTransactionData,
+  EvmToHubTransferParams,
+} from './adapters/evm.js';
