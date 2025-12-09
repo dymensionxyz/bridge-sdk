@@ -46,8 +46,16 @@ export {
   solanaAddressToHyperlane,
 } from './utils/address.js';
 
-// Kaspa adapter
+// Adapters
 export {
   serializeKaspaDepositPayload,
   getKaspaEscrowAddress,
+} from './adapters/index.js';
+export {
+  createHubAdapter,
+  HubAdapter,
+} from './adapters/index.js';
+export type {
+  HubTransferParams,
+  MsgExecuteContract,
 } from './adapters/index.js';
