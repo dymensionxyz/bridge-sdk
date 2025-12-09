@@ -2,6 +2,7 @@
  * Main BridgeClient class for programmatic bridging
  */
 
+import type { PopulatedTransaction } from 'ethers';
 import type { DymensionBridgeConfig, ResolvedConfig } from './config/types.js';
 import { createConfig } from './config/index.js';
 import type { FeeBreakdown } from './fees/index.js';
@@ -24,11 +25,12 @@ export interface HubToEvmParams {
  * Parameters for EVM to Hub transfers
  */
 export interface EvmToHubParams {
-  chain: 'ethereum' | 'base' | 'bsc';
-  token: string;
+  sourceChain: 'ethereum' | 'base' | 'bsc';
+  tokenAddress: string;
   recipient: string;
   amount: bigint;
   sender: string;
+  rpcUrl?: string;
 }
 
 /**
@@ -121,9 +123,9 @@ export class BridgeClient {
   /**
    * Create unsigned transaction for EVM -> Hub transfer
    */
-  async populateEvmToHubTx(_params: EvmToHubParams): Promise<unknown> {
-    // TODO: Implement using EvmHypSyntheticAdapter
-    throw new Error('Not implemented');
+  async populateEvmToHubTx(params: EvmToHubParams): Promise<PopulatedTransaction> {
+    const { populateEvmToHubTransfer } = await import('./adapters/evm.js');
+    return populateEvmToHubTransfer(params);
   }
 
   /**
