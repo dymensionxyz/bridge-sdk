@@ -37,6 +37,15 @@ export {
   createIBCToHyperlaneMemo,
   createHLMetadataForIBC,
   createHLMetadataForHL,
+  HOOK_NAMES,
+} from './forward/index.js';
+export type {
+  RollAppToHyperlaneParams,
+  IBCToHyperlaneParams,
+  HLToIBCParams,
+  HLToHLParams,
+  MsgRemoteTransferFields,
+  HLMetadataFields,
 } from './forward/index.js';
 
 // Address utilities
@@ -51,3 +60,4 @@ export {
   serializeKaspaDepositPayload,
   getKaspaEscrowAddress,
 } from './adapters/index.js';
+export type { KaspaDepositParams } from './adapters/index.js';

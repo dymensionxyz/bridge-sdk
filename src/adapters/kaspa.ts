@@ -48,10 +48,6 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
 
   // Construct full Hyperlane message
   // TODO: Full message construction with proper header
-  void kaspaDomain;
-  void hubDomain;
-  void HUB_TOKEN_IDS.KAS;
-
   // Placeholder - needs proper Hyperlane message serialization
   return bodyBytes;
 }

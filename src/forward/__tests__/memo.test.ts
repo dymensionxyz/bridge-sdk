@@ -49,7 +49,7 @@ describe('memo construction', () => {
 
       const reader = Reader.create(completionHookBytes);
       let hookName = '';
-      let hookData = new Uint8Array();
+      let hookData: Uint8Array = new Uint8Array();
 
       while (reader.pos < reader.len) {
         const tag = reader.uint32();
