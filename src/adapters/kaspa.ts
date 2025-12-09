@@ -5,7 +5,7 @@
  * that the user must include in their Kaspa transaction.
  */
 
-import { KASPA, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { KASPA, DOMAINS } from '../config/constants.js';
 import { cosmosAddressToHyperlane } from '../utils/address.js';
 
 /**
@@ -53,7 +53,6 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
   // TODO: Full message construction with proper header
   void kaspaDomain;
   void hubDomain;
-  void HUB_TOKEN_IDS.KAS;
 
   // Placeholder - needs proper Hyperlane message serialization
   return bodyBytes;
