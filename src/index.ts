@@ -53,6 +53,7 @@ export {
   cosmosAddressToHyperlane,
   evmAddressToHyperlane,
   solanaAddressToHyperlane,
+  kaspaAddressToHyperlane,
 } from './utils/address.js';
 
 // Adapters
@@ -61,6 +62,9 @@ export {
   HubAdapter,
   createHubAdapter,
   getMainnetWarpRoutes,
+  // Hub to Kaspa (standalone function)
+  populateHubToKaspaTx,
+  DEFAULT_HUB_TO_KASPA_IGP,
   // EVM adapter (function-based)
   populateEvmToHubTransfer,
   getEvmTokenContract,
@@ -76,6 +80,8 @@ export {
 export type {
   KaspaDepositParams,
   HubToEvmParams,
+  HubToKaspaParams,
+  MsgRemoteTransfer,
   WarpRouteAddresses,
   MsgExecuteContract,
   EvmToHubTransferParams,

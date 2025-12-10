@@ -7,8 +7,8 @@
 
 import { toUtf8 } from '@cosmjs/encoding';
 import type { Coin } from '@cosmjs/stargate';
-import { DEFAULT_IGP_GAS, HUB_WARP_ROUTES } from '../config/constants.js';
-import { evmAddressToHyperlane } from '../utils/address.js';
+import { DEFAULT_IGP_GAS, HUB_WARP_ROUTES, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { evmAddressToHyperlane, kaspaAddressToHyperlane } from '../utils/address.js';
 
 /**
  * CosmWasm MsgExecuteContract message type
@@ -159,4 +159,100 @@ export function createHubAdapter(
  */
 export function getMainnetWarpRoutes(): WarpRouteAddresses {
   return HUB_WARP_ROUTES;
+}
+
+/**
+ * Parameters for Hub to Kaspa transfer
+ */
+export interface HubToKaspaParams {
+  /** Hub sender address (dym1...) */
+  sender: string;
+  /** Kaspa recipient address (kaspa:... or kaspatest:...) */
+  kaspaRecipient: string;
+  /** Amount in sompi (1 KAS = 100,000,000 sompi) */
+  amount: bigint;
+  /** Network selection */
+  network?: 'mainnet' | 'testnet';
+  /** Optional IGP fee in adym (default: 100000000000000000 = 0.1 DYM) */
+  igpFee?: bigint;
+}
+
+/**
+ * MsgRemoteTransfer for Hyperlane warp module
+ *
+ * This is the native Cosmos SDK message type for Hub → Kaspa transfers.
+ */
+export interface MsgRemoteTransfer {
+  typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer';
+  value: {
+    sender: string;
+    tokenId: string;
+    destinationDomain: number;
+    recipient: string;
+    amount: string;
+    customHookId: string;
+    gasLimit: string;
+    maxFee: Coin;
+    customHookMetadata: string;
+  };
+}
+
+/**
+ * Default IGP fee for Hub → Kaspa transfers (0.1 DYM)
+ */
+export const DEFAULT_HUB_TO_KASPA_IGP = 100_000_000_000_000_000n;
+
+/**
+ * Populate a Hub to Kaspa transfer transaction
+ *
+ * Creates a MsgRemoteTransfer for the Hyperlane warp module.
+ * This is a standalone function that doesn't require the HubAdapter class.
+ *
+ * @param params - Transfer parameters
+ * @returns MsgRemoteTransfer message ready for signing with CosmJS
+ *
+ * @example
+ * ```typescript
+ * const msg = populateHubToKaspaTx({
+ *   sender: 'dym1...',
+ *   kaspaRecipient: 'kaspa:qr...',
+ *   amount: 5_000_000_000n, // 50 KAS
+ * });
+ *
+ * const result = await client.signAndBroadcast(sender, [msg], 'auto');
+ * ```
+ */
+export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfer {
+  const {
+    sender,
+    kaspaRecipient,
+    amount,
+    network = 'mainnet',
+    igpFee = DEFAULT_HUB_TO_KASPA_IGP,
+  } = params;
+
+  const destinationDomain = network === 'mainnet'
+    ? DOMAINS.KASPA_MAINNET
+    : DOMAINS.KASPA_TESTNET;
+
+  // Convert Kaspa address to 32-byte hex (without 0x prefix for the message)
+  const recipientHex = kaspaAddressToHyperlane(kaspaRecipient).slice(2);
+
+  return {
+    typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
+    value: {
+      sender,
+      tokenId: HUB_TOKEN_IDS.KAS,
+      destinationDomain,
+      recipient: recipientHex,
+      amount: amount.toString(),
+      customHookId: '',
+      gasLimit: '0',
+      maxFee: {
+        denom: 'adym',
+        amount: igpFee.toString(),
+      },
+      customHookMetadata: '',
+    },
+  };
 }

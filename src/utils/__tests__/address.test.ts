@@ -3,6 +3,7 @@ import {
   evmAddressToHyperlane,
   cosmosAddressToHyperlane,
   solanaAddressToHyperlane,
+  kaspaAddressToHyperlane,
   hyperlaneToEvmAddress,
   hyperlaneToCosmosAddress,
   isValidEvmAddress,
@@ -185,6 +186,35 @@ describe('Address Conversion Utilities', () => {
       expect(isValidHyperlaneAddress('invalid')).toBe(false);
       expect(isValidHyperlaneAddress('0x123')).toBe(false);
       expect(isValidHyperlaneAddress(EVM_ADDRESS)).toBe(false);
+    });
+  });
+
+  describe('kaspaAddressToHyperlane', () => {
+    it('converts Kaspa testnet address to 32-byte format', () => {
+      // Use the address from the Rust roundtrip test
+      const kaspaAddress = 'kaspatest:qzlq49spp66vkjjex0w7z8708f6zteqwr6swy33fmy4za866ne90vhy54uh3j';
+      const result = kaspaAddressToHyperlane(kaspaAddress);
+      // Verify format
+      expect(result.startsWith('0x')).toBe(true);
+      expect(result.length).toBe(66); // 0x + 64 hex chars
+      // The value can be verified via Rust roundtrip
+    });
+
+    it('handles mainnet escrow address', () => {
+      // This is the actual mainnet escrow address
+      const mainnetAddress = 'kaspa:prztt2hd2txge07syjvhaz5j6l9ql6djhc9equela058rjm6vww0uwre5dulh';
+      const result = kaspaAddressToHyperlane(mainnetAddress);
+      expect(result.startsWith('0x')).toBe(true);
+      expect(result.length).toBe(66);
+    });
+
+    it('throws on invalid prefix', () => {
+      expect(() => kaspaAddressToHyperlane('bitcoin:abc123')).toThrow('Invalid Kaspa address prefix');
+    });
+
+    it('throws on malformed address', () => {
+      expect(() => kaspaAddressToHyperlane('kaspa')).toThrow('expected prefix:data');
+      expect(() => kaspaAddressToHyperlane('invalid')).toThrow('expected prefix:data');
     });
   });
 

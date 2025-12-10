@@ -120,3 +120,62 @@ export function isValidHyperlaneAddress(hex: string): boolean {
   const cleaned = hex.startsWith('0x') ? hex.slice(2) : hex;
   return /^[0-9a-fA-F]{64}$/.test(cleaned);
 }
+
+/**
+ * Convert a Kaspa address to Hyperlane 32-byte hex format
+ *
+ * Kaspa addresses use bech32m encoding with a 32-byte schnorr public key payload.
+ * Format: kaspa:<bech32m data> or kaspatest:<bech32m data>
+ *
+ * @param kaspaAddress - Kaspa address (e.g., "kaspa:qr0jmjgh2sx88q9...")
+ * @returns 32-byte hex string with 0x prefix
+ */
+export function kaspaAddressToHyperlane(kaspaAddress: string): string {
+  const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+
+  const parts = kaspaAddress.split(':');
+  if (parts.length !== 2) {
+    throw new Error('Invalid Kaspa address format: expected prefix:data');
+  }
+
+  const prefix = parts[0];
+  if (prefix !== 'kaspa' && prefix !== 'kaspatest') {
+    throw new Error(`Invalid Kaspa address prefix: ${prefix}`);
+  }
+
+  const data = parts[1];
+  // Kaspa bech32m: 8 checksum chars at the end
+  const dataWithoutChecksum = data.slice(0, -8);
+
+  // Decode bech32 5-bit values
+  const values: number[] = [];
+  for (const char of dataWithoutChecksum) {
+    const idx = CHARSET.indexOf(char);
+    if (idx === -1) {
+      throw new Error(`Invalid character in Kaspa address: ${char}`);
+    }
+    values.push(idx);
+  }
+
+  // First value is the version byte, skip it
+  // Convert remaining 5-bit groups to 8-bit bytes
+  const bytes: number[] = [];
+  let acc = 0;
+  let bitCount = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    acc = (acc << 5) | values[i];
+    bitCount += 5;
+    while (bitCount >= 8) {
+      bitCount -= 8;
+      bytes.push((acc >> bitCount) & 0xff);
+    }
+  }
+
+  // Discard any remaining bits (padding)
+  if (bytes.length !== 32) {
+    throw new Error(`Invalid Kaspa address: expected 32-byte pubkey, got ${bytes.length}`);
+  }
+
+  return '0x' + bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
