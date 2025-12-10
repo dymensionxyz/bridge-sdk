@@ -1,0 +1,15 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "name": "Dymension Bridge SDK",
+  "readme": "README.md",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "exclude": ["**/__tests__/**", "**/*.test.ts"],
+  "navigationLinks": {
+    "GitHub": "https://github.com/dymensionxyz/bridge-sdk",
+    "npm": "https://www.npmjs.com/package/@daniel.dymension.xyz/bridge-sdk"
+  }
+}

@@ -74,10 +74,7 @@ const client = createBridgeClient({
 
 ## Documentation
 
-- [API Reference](./docs/api.md)
-- [Fee Calculation](./docs/fees.md)
-- [Forwarding Guide](./docs/forwarding.md)
-- [Examples](./examples/)
+[API Reference](https://dymensionxyz.github.io/bridge-sdk/)
 
 ## Development
 
