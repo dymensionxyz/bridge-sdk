@@ -1,6 +1,6 @@
 {
   "name": "@daniel.dymension.xyz/bridge-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Programmatic bridging SDK for Dymension Hyperlane integration",
   "type": "module",
   "main": "./dist/index.js",
