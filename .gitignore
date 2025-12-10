@@ -29,6 +29,9 @@ yarn-error.log*
 # Test coverage
 coverage/
 
+# Generated docs
+docs/
+
 # Cache
 .cache/
 .eslintcache
