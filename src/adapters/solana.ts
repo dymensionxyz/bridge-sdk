@@ -44,6 +44,21 @@ export interface HubToSolanaParams {
 }
 
 /**
+ * Parameters for Solana to Hub transfers with forwarding
+ */
+export interface SolanaToHubWithForwardingParams {
+  tokenProgramId: string;
+  /** Hub recipient address (dym1...) - will receive funds after forwarding or if forwarding fails */
+  hubRecipient: string;
+  amount: bigint;
+  sender: string;
+  /** HLMetadata bytes for forwarding (use createHLMetadataForIBC or createHLMetadataForHL) */
+  metadata: Uint8Array;
+  network?: 'mainnet' | 'testnet';
+  rpcUrl: string;
+}
+
+/**
  * Build a partial Solana transaction for transferring tokens to Hub
  *
  * This transaction must be signed by the user's wallet before submission.
@@ -235,4 +250,168 @@ export function deriveAssociatedTokenAccount(
   owner: PublicKey,
 ): PublicKey {
   return getAssociatedTokenAddressSync(tokenMint, owner, true, TOKEN_2022_PROGRAM_ID);
+}
+
+/**
+ * Build a partial Solana transaction for transferring tokens to Hub with forwarding
+ *
+ * This transaction must be signed by the user's wallet before submission.
+ * The transaction includes:
+ * - Compute budget instructions for priority fees
+ * - Transfer remote memo instruction to the Hyperlane warp program
+ *
+ * Use createHLMetadataForIBC() for forwarding to IBC chains (e.g., Osmosis, Cosmos Hub)
+ * Use createHLMetadataForHL() for forwarding to other Hyperlane chains (e.g., Kaspa, other EVM)
+ *
+ * @param params - Transfer parameters including HLMetadata for forwarding
+ * @returns Partial transaction ready for user signature
+ */
+export async function buildSolanaToHubWithForwardingTx(
+  params: SolanaToHubWithForwardingParams,
+): Promise<Transaction> {
+  const {
+    tokenProgramId,
+    hubRecipient,
+    amount,
+    sender,
+    metadata,
+    network = 'mainnet',
+    rpcUrl,
+  } = params;
+
+  const warpProgramPubKey = new PublicKey(tokenProgramId);
+  const senderPubKey = new PublicKey(sender);
+  const hubDomain = network === 'mainnet' ? DOMAINS.DYMENSION_MAINNET : DOMAINS.DYMENSION_TESTNET;
+
+  // Hub recipient is a Cosmos address, convert it to Hyperlane format
+  const recipientHex = cosmosAddressToHyperlane(hubRecipient);
+  const recipientBytes = hexToBytes(recipientHex);
+
+  const randomWallet = Keypair.generate();
+
+  const connection = new Connection(rpcUrl, 'confirmed');
+
+  const mailboxPubKey = deriveMailboxPda(warpProgramPubKey);
+  const tokenPda = deriveHypTokenAccount(warpProgramPubKey);
+  const mailboxOutbox = deriveMailboxOutboxAccount(mailboxPubKey);
+  const dispatchAuthority = deriveMessageDispatchAuthorityAccount(warpProgramPubKey);
+  const msgStorage = deriveMsgStorageAccount(mailboxPubKey, randomWallet.publicKey);
+
+  const keys = [
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: new PublicKey(SEALEVEL_SPL_NOOP_ADDRESS), isSigner: false, isWritable: false },
+    { pubkey: tokenPda, isSigner: false, isWritable: false },
+    { pubkey: mailboxPubKey, isSigner: false, isWritable: false },
+    { pubkey: mailboxOutbox, isSigner: false, isWritable: true },
+    { pubkey: dispatchAuthority, isSigner: false, isWritable: false },
+    { pubkey: senderPubKey, isSigner: true, isWritable: false },
+    { pubkey: randomWallet.publicKey, isSigner: true, isWritable: false },
+    { pubkey: msgStorage, isSigner: false, isWritable: true },
+    { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
+  ];
+
+  // Serialize TransferRemoteMemo instruction using DymInstruction format
+  const instructionData = serializeTransferRemoteMemoInstruction(
+    hubDomain,
+    recipientBytes,
+    amount,
+    metadata,
+  );
+
+  const transferRemoteMemoInstruction = new TransactionInstruction({
+    keys,
+    programId: warpProgramPubKey,
+    data: Buffer.concat([
+      Buffer.from([1, 1, 1, 1, 1, 1, 1, 1]), // Discriminator
+      instructionData,
+    ]),
+  });
+
+  const setComputeLimitInstruction = ComputeBudgetProgram.setComputeUnitLimit({
+    units: SOLANA.COMPUTE_UNIT_LIMIT,
+  });
+
+  const setPriorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: SOLANA.DEFAULT_PRIORITY_FEE,
+  });
+
+  const recentBlockhash = (await connection.getLatestBlockhash('finalized')).blockhash;
+
+  const tx = new Transaction({
+    feePayer: senderPubKey,
+    recentBlockhash,
+  });
+
+  tx.add(setComputeLimitInstruction);
+  tx.add(setPriorityFeeInstruction);
+  tx.add(transferRemoteMemoInstruction);
+  tx.partialSign(randomWallet);
+
+  return tx;
+}
+
+/**
+ * Serialize TransferRemoteMemo instruction data for DymInstruction enum
+ *
+ * Format (Borsh):
+ * - 1 byte: enum variant index (0 for TransferRemoteMemo)
+ * - TransferRemoteMemo struct:
+ *   - base (TransferRemote):
+ *     - 4 bytes: destination_domain (u32 LE)
+ *     - 32 bytes: recipient (H256)
+ *     - 32 bytes: amount_or_id (U256 LE)
+ *   - memo (Vec<u8>):
+ *     - 4 bytes: length (u32 LE)
+ *     - N bytes: data
+ */
+function serializeTransferRemoteMemoInstruction(
+  destinationDomain: number,
+  recipient: Uint8Array,
+  amount: bigint,
+  memo: Uint8Array,
+): Buffer {
+  // Calculate total size: 1 (variant) + 4 (domain) + 32 (recipient) + 32 (amount) + 4 (memo len) + memo.length
+  const totalSize = 1 + 4 + 32 + 32 + 4 + memo.length;
+  const buffer = Buffer.alloc(totalSize);
+  let offset = 0;
+
+  // Enum variant index (0 for TransferRemoteMemo)
+  buffer.writeUInt8(0, offset);
+  offset += 1;
+
+  // destination_domain (u32 LE)
+  buffer.writeUInt32LE(destinationDomain, offset);
+  offset += 4;
+
+  // recipient (H256 - 32 bytes)
+  buffer.set(recipient, offset);
+  offset += 32;
+
+  // amount_or_id (U256 - 32 bytes LE)
+  // Write the bigint as little-endian 256-bit value
+  const amountBuf = bigintToU256LE(amount);
+  buffer.set(amountBuf, offset);
+  offset += 32;
+
+  // memo length (u32 LE)
+  buffer.writeUInt32LE(memo.length, offset);
+  offset += 4;
+
+  // memo data
+  buffer.set(memo, offset);
+
+  return buffer;
+}
+
+/**
+ * Convert a bigint to a 32-byte little-endian U256 buffer
+ */
+function bigintToU256LE(value: bigint): Uint8Array {
+  const buffer = new Uint8Array(32);
+  let remaining = value;
+  for (let i = 0; i < 32; i++) {
+    buffer[i] = Number(remaining & BigInt(0xff));
+    remaining = remaining >> BigInt(8);
+  }
+  return buffer;
 }
