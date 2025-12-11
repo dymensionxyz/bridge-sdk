@@ -20,6 +20,20 @@ export {
 export { DEFAULT_RPC_URLS, DEFAULT_REST_URLS } from './config/rpc.js';
 export type { DymensionBridgeConfig, ResolvedConfig } from './config/types.js';
 
+// Token registry
+export {
+  TOKENS,
+  getToken,
+  getTokenAddress,
+  getHubTokenId,
+  getHubDenom,
+  getTokenDecimals,
+  isTokenAvailableOnChain,
+  getTokensOnChain,
+  getAllTokenSymbols,
+} from './config/tokens.js';
+export type { TokenConfig, TokenSymbol, TokenChainName } from './config/tokens.js';
+
 // Fee utilities
 export {
   calculateBridgingFee,

@@ -1,6 +1,7 @@
 export * from './constants.js';
 export * from './rpc.js';
 export * from './types.js';
+export * from './tokens.js';
 
 import type { DymensionBridgeConfig, ResolvedConfig } from './types.js';
 import { DEFAULT_RPC_URLS, DEFAULT_REST_URLS, DEFAULT_GRPC_URLS } from './rpc.js';
