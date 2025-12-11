@@ -57,9 +57,7 @@ describe('Token Registry', () => {
     });
 
     it('should return testnet address when available', () => {
-      expect(getTokenAddress('USDC', 'solana', 'testnet')).toBe(
-        'CpMah17kQEL2wqyMKt3mZBdTnZbkbfx4nqmQMFDP5vwp'
-      );
+      expect(getTokenAddress('KAS', 'kaspa', 'testnet')).toBe('native');
     });
 
     it('should fall back to mainnet if no testnet address', () => {
@@ -94,7 +92,7 @@ describe('Token Registry', () => {
     it('should return correct decimals', () => {
       expect(getTokenDecimals('KAS')).toBe(8);
       expect(getTokenDecimals('ETH')).toBe(18);
-      expect(getTokenDecimals('USDC')).toBe(6);
+      expect(getTokenDecimals('DYM')).toBe(18);
       expect(getTokenDecimals('SOL')).toBe(9);
     });
   });
@@ -112,7 +110,8 @@ describe('Token Registry', () => {
     });
 
     it('should check testnet availability', () => {
-      expect(isTokenAvailableOnChain('USDC', 'solana', 'testnet')).toBe(true);
+      expect(isTokenAvailableOnChain('KAS', 'kaspa', 'testnet')).toBe(true);
+      expect(isTokenAvailableOnChain('SOL', 'solana', 'testnet')).toBe(true);
     });
   });
 
@@ -128,9 +127,8 @@ describe('Token Registry', () => {
     it('should return tokens available on solana', () => {
       const tokens = getTokensOnChain('solana');
       expect(tokens).toContain('SOL');
-      expect(tokens).toContain('USDC');
-      expect(tokens).toContain('USDT');
       expect(tokens).not.toContain('ETH');
+      expect(tokens).not.toContain('KAS');
     });
   });
 
@@ -141,7 +139,7 @@ describe('Token Registry', () => {
       expect(symbols).toContain('ETH');
       expect(symbols).toContain('DYM');
       expect(symbols).toContain('SOL');
-      expect(symbols.length).toBeGreaterThanOrEqual(6);
+      expect(symbols.length).toBe(4);
     });
   });
 });

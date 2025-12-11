@@ -5,6 +5,8 @@
  * including their addresses on each chain, Hub token IDs, and IBC denoms.
  */
 
+import type { Network } from './chains.js';
+
 /** Supported chain names for token addresses */
 export type TokenChainName =
   | 'ethereum'
@@ -12,11 +14,7 @@ export type TokenChainName =
   | 'bsc'
   | 'solana'
   | 'kaspa'
-  | 'dymension'
-  | 'noble';
-
-/** Network variant */
-export type Network = 'mainnet' | 'testnet';
+  | 'dymension';
 
 /** Token configuration */
 export interface TokenConfig {
@@ -93,33 +91,6 @@ export const TOKENS = {
     },
     testnetAddresses: {
       solana: 'So11111111111111111111111111111111111111112',
-    },
-  },
-  USDC: {
-    symbol: 'USDC',
-    displayName: 'USD Coin',
-    decimals: 6,
-    hubTokenId: '0x0000000000000000000000000000000000000000000000000000000000000000', // TODO
-    hubDenom: 'ibc/TODO_USDC_DENOM',
-    addresses: {
-      solana: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-      noble: 'uusdc',
-    },
-    testnetAddresses: {
-      solana: 'CpMah17kQEL2wqyMKt3mZBdTnZbkbfx4nqmQMFDP5vwp',
-    },
-  },
-  USDT: {
-    symbol: 'USDT',
-    displayName: 'Tether USD',
-    decimals: 6,
-    hubTokenId: '0x0000000000000000000000000000000000000000000000000000000000000000', // TODO
-    hubDenom: 'ibc/TODO_USDT_DENOM',
-    addresses: {
-      solana: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-    },
-    testnetAddresses: {
-      solana: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
     },
   },
 } as const;

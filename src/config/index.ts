@@ -1,6 +1,7 @@
 export * from './constants.js';
 export * from './rpc.js';
 export * from './types.js';
+export * from './chains.js';
 export * from './tokens.js';
 
 import type { DymensionBridgeConfig, ResolvedConfig } from './types.js';

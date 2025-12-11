@@ -20,10 +20,33 @@ export interface EvmToHubTransferParams {
 }
 
 /**
+ * Parameters for EVM to Hub transfer with forwarding
+ */
+export interface EvmToHubWithForwardingParams {
+  sourceChain: 'ethereum' | 'base' | 'bsc';
+  tokenAddress: string;
+  /** Hub recipient address (dym1...) - will receive funds after forwarding completes or if forwarding fails */
+  hubRecipient: string;
+  amount: bigint;
+  sender: string;
+  /** HLMetadata bytes for forwarding (use createHLMetadataForIBC or createHLMetadataForHL) */
+  metadata: Uint8Array;
+  rpcUrl?: string;
+}
+
+/**
  * Minimal ABI for HypERC20/HypNative transferRemote function
  */
 const HYPER20_TRANSFER_REMOTE_ABI = [
   'function transferRemote(uint32 _destination, bytes32 _recipient, uint256 _amount) external payable returns (bytes32 messageId)',
+  'function quoteGasPayment(uint32 _destinationDomain) external view returns (uint256)',
+];
+
+/**
+ * Minimal ABI for HypERC20Memo/HypNativeMemo transferRemoteMemo function
+ */
+const HYPER20_MEMO_ABI = [
+  'function transferRemoteMemo(uint32 _destination, bytes32 _recipient, uint256 _amountOrId, bytes calldata memo) external payable returns (bytes32 messageId)',
   'function quoteGasPayment(uint32 _destinationDomain) external view returns (uint256)',
 ];
 
@@ -140,4 +163,57 @@ export async function estimateEvmToHubGas(
   const gasPayment = await contract.quoteGasPayment(hubDomain);
 
   return BigInt(gasPayment.toString());
+}
+
+/**
+ * Populate an EVM transaction for transferring tokens to Hub with forwarding
+ *
+ * This uses the HypERC20Memo/HypNativeMemo contract's transferRemoteMemo function
+ * to send tokens with HLMetadata that instructs the Hub to forward to another chain.
+ *
+ * Use createHLMetadataForIBC() for forwarding to IBC chains (e.g., Osmosis, Cosmos Hub)
+ * Use createHLMetadataForHL() for forwarding to other Hyperlane chains (e.g., Kaspa, other EVM)
+ *
+ * @param params - Transfer parameters including HLMetadata for forwarding
+ * @returns PopulatedTransaction ready for signing and sending
+ */
+export async function populateEvmToHubWithForwarding(
+  params: EvmToHubWithForwardingParams
+): Promise<PopulatedTransaction> {
+  const { sourceChain, tokenAddress, hubRecipient, amount, sender, metadata, rpcUrl } = params;
+
+  // Validate recipient is a valid Cosmos address
+  if (!hubRecipient.startsWith('dym1')) {
+    throw new Error('Hub recipient must be a Dymension address (dym1...)');
+  }
+
+  // Convert Cosmos address to Hyperlane 32-byte format
+  const recipientBytes32 = cosmosAddressToHyperlane(hubRecipient);
+
+  // Get Hub domain ID (hardcoded to mainnet for now)
+  const hubDomain = getHubDomain('mainnet');
+
+  // Create provider and contract instance with memo ABI
+  const provider = createProvider(sourceChain, rpcUrl);
+  const contract = new Contract(tokenAddress, HYPER20_MEMO_ABI, provider);
+
+  // Quote interchain gas payment
+  const gasPayment = await contract.quoteGasPayment(hubDomain);
+
+  // Convert metadata to hex string for ethers
+  const metadataHex = '0x' + Buffer.from(metadata).toString('hex');
+
+  // Populate the transferRemoteMemo transaction
+  const tx = await contract.populateTransaction.transferRemoteMemo(
+    hubDomain,
+    recipientBytes32,
+    amount,
+    metadataHex,
+    {
+      value: gasPayment,
+      from: sender,
+    }
+  );
+
+  return tx;
 }
