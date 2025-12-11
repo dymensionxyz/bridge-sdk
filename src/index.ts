@@ -43,6 +43,20 @@ export type {
   ChainName,
 } from './config/chains.js';
 
+// Token registry
+export {
+  TOKENS,
+  getToken,
+  getTokenAddress,
+  getHubTokenId,
+  getHubDenom,
+  getTokenDecimals,
+  isTokenAvailableOnChain,
+  getTokensOnChain,
+  getAllTokenSymbols,
+} from './config/tokens.js';
+export type { TokenConfig, TokenSymbol, TokenChainName } from './config/tokens.js';
+
 // Fee utilities
 export {
   calculateBridgingFee,
