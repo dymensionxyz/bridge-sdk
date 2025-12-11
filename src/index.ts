@@ -20,6 +20,29 @@ export {
 export { DEFAULT_RPC_URLS, DEFAULT_REST_URLS } from './config/rpc.js';
 export type { DymensionBridgeConfig, ResolvedConfig } from './config/types.js';
 
+// Chain registry
+export {
+  CHAINS,
+  getChainConfig,
+  getHyperlaneDomain,
+  getIBCChannelFromHub,
+  getIBCChannelToHub,
+  isHyperlaneChain,
+  isIBCChain,
+  getAllChainNames,
+  getHyperlaneChainNames,
+  getIBCChainNames,
+} from './config/chains.js';
+export type {
+  ChainType,
+  Network,
+  ChainConfig,
+  HyperlaneChainConfig,
+  IBCChainConfig,
+  HubChainConfig,
+  ChainName,
+} from './config/chains.js';
+
 // Fee utilities
 export {
   calculateBridgingFee,
