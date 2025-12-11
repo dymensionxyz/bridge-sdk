@@ -67,10 +67,12 @@ export {
   DEFAULT_HUB_TO_KASPA_IGP,
   // EVM adapter (function-based)
   populateEvmToHubTransfer,
+  populateEvmToHubWithForwarding,
   getEvmTokenContract,
   estimateEvmToHubGas,
   // Solana adapter (function-based)
   buildSolanaToHubTx,
+  buildSolanaToHubWithForwardingTx,
   getSolanaWarpProgramId,
   deriveAssociatedTokenAccount,
   // Kaspa utilities
@@ -85,6 +87,8 @@ export type {
   WarpRouteAddresses,
   MsgExecuteContract,
   EvmToHubTransferParams,
+  EvmToHubWithForwardingParams,
   SolanaToHubParams,
+  SolanaToHubWithForwardingParams,
   HubToSolanaParams,
 } from './adapters/index.js';
