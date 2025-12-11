@@ -6,6 +6,7 @@
 
 // Main client
 export { createBridgeClient, BridgeClient } from './client.js';
+export type { TransferParams, TransferResult } from './client.js';
 
 // Configuration
 export {
