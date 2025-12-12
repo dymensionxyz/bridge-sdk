@@ -11,6 +11,7 @@ import {
   calculateForwardingFees,
   FeeProvider,
   createFeeProvider,
+  multiplyByRate,
 } from './fees/index.js';
 import {
   createHubAdapter,
@@ -333,7 +334,7 @@ export class BridgeClient {
     let eibcFee: bigint | undefined;
     const sourceConfig = getChainConfig(source as ChainName);
     if (sourceConfig.type === 'ibc' && eibcFeePercent !== undefined) {
-      eibcFee = BigInt(Math.floor(Number(amount) * (eibcFeePercent / 100)));
+      eibcFee = multiplyByRate(amount, eibcFeePercent / 100);
     }
 
     // Calculate IGP fee based on destination

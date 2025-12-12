@@ -11,7 +11,7 @@
  * Where budget is what arrives at Hub after hop 1 fees
  */
 
-import { calculateBridgingFee } from './bridging.js';
+import { calculateBridgingFee, multiplyByRate } from './bridging.js';
 
 /**
  * Route types for forwarding transfers
@@ -164,11 +164,11 @@ export function calculateForwardingFees(params: ForwardingParams): ForwardingCal
   // Deduct EIBC and delayedack fees (for RollApp -> Hub)
   if (routeType.startsWith('rollapp-')) {
     if (eibcFeePercent > 0) {
-      hop1Fees.eibcFee = BigInt(Math.floor(Number(amount) * eibcFeePercent / 100));
+      hop1Fees.eibcFee = multiplyByRate(amount, eibcFeePercent / 100);
       hubBudget -= hop1Fees.eibcFee;
     }
     if (delayedAckBridgingFeeRate > 0) {
-      hop1Fees.delayedAckBridgingFee = BigInt(Math.floor(Number(amount) * delayedAckBridgingFeeRate));
+      hop1Fees.delayedAckBridgingFee = multiplyByRate(amount, delayedAckBridgingFeeRate);
       hubBudget -= hop1Fees.delayedAckBridgingFee;
     }
   }
@@ -229,12 +229,24 @@ export function calculateForwardingFees(params: ForwardingParams): ForwardingCal
 }
 
 /**
+ * Precision for bigint decimal arithmetic (18 decimal places)
+ */
+const PRECISION = 10n ** 18n;
+
+/**
+ * Convert a decimal rate to bigint with PRECISION decimal places
+ */
+function rateToBigInt(rate: number): bigint {
+  return BigInt(Math.floor(rate * Number(PRECISION)));
+}
+
+/**
  * Calculate the minimum send amount needed to ensure recipient receives desired amount
  *
  * This is the inverse of calculateForwardingFees - given a desired recipient amount,
  * calculate how much the user needs to send.
  *
- * Uses iterative refinement to handle the precision loss from Math.floor in fee calculations.
+ * Uses iterative refinement to handle rounding in fee calculations.
  *
  * @param desiredRecipientAmount - Amount the recipient should receive after all fees
  * @param params - Fee parameters (same as calculateForwardingFees but without amount)
@@ -253,11 +265,8 @@ export function calculateForwardingSendAmount(
     hop2OutboundBridgingFeeRate,
   } = params;
 
-  // Use 18 decimal precision for bigint math
-  const PRECISION = 10n ** 18n;
-
-  // Convert rates to bigint (multiply by PRECISION)
-  const outboundRateBig = BigInt(Math.floor(hop2OutboundBridgingFeeRate * Number(PRECISION)));
+  // Convert rates to bigint
+  const outboundRateBig = rateToBigInt(hop2OutboundBridgingFeeRate);
 
   // Work backwards from recipient amount
   // recipientReceives = forwardAmount - outboundBridgingFee
@@ -276,11 +285,11 @@ export function calculateForwardingSendAmount(
   // Calculate hop 1 deductions rate (in bigint)
   let hop1DeductionRateBig = 0n;
   if (routeType.startsWith('hl-')) {
-    hop1DeductionRateBig += BigInt(Math.floor(hop1InboundBridgingFeeRate * Number(PRECISION)));
+    hop1DeductionRateBig += rateToBigInt(hop1InboundBridgingFeeRate);
   }
   if (routeType.startsWith('rollapp-')) {
-    hop1DeductionRateBig += BigInt(Math.floor((eibcFeePercent / 100) * Number(PRECISION)));
-    hop1DeductionRateBig += BigInt(Math.floor(delayedAckBridgingFeeRate * Number(PRECISION)));
+    hop1DeductionRateBig += rateToBigInt(eibcFeePercent / 100);
+    hop1DeductionRateBig += rateToBigInt(delayedAckBridgingFeeRate);
   }
 
   // hubBudget = amount * (1 - hop1DeductionRate)
@@ -291,7 +300,7 @@ export function calculateForwardingSendAmount(
   let sendAmount = (hubBudget * PRECISION + oneMinusHop1 - 1n) / oneMinusHop1;
 
   // Iterative refinement: verify the calculated amount and adjust if needed
-  // This handles precision loss from Math.floor in calculateBridgingFee
+  // This handles rounding differences in fee calculations
   const fullParams: ForwardingParams = {
     ...params,
     amount: sendAmount,
