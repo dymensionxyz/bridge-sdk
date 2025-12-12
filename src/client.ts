@@ -42,7 +42,8 @@ import {
   evmAddressToHyperlane,
   kaspaAddressToHyperlane,
   solanaAddressToHyperlane,
-} from './utils/address.js';
+  createIbcTimeoutTimestamp,
+} from './utils/index.js';
 
 /**
  * Parameters for Hub to EVM chain transfers
@@ -511,8 +512,7 @@ export class BridgeClient {
       const channel = getIBCChannelFromHub(to);
       const denom = getHubDenom(token);
 
-      // 1 hour timeout from now
-      const timeoutTimestamp = BigInt((Math.floor(Date.now() / 1000) + 3600) * 1_000_000_000);
+      const timeoutTimestamp = createIbcTimeoutTimestamp();
 
       const tx: MsgTransfer = {
         typeUrl: '/ibc.applications.transfer.v1.MsgTransfer',
@@ -598,8 +598,7 @@ export class BridgeClient {
       // This is typically the IBC denom of the token on that chain
       const denom = getHubDenom(token);
 
-      // 1 hour timeout from now
-      const timeoutTimestamp = BigInt((Math.floor(Date.now() / 1000) + 3600) * 1_000_000_000);
+      const timeoutTimestamp = createIbcTimeoutTimestamp();
 
       const tx: MsgTransfer = {
         typeUrl: '/ibc.applications.transfer.v1.MsgTransfer',
@@ -721,7 +720,7 @@ export class BridgeClient {
 
       const channel = getIBCChannelFromHub(to);
       const hubDenom = getHubDenom(token);
-      const timeoutNanos = BigInt((Math.floor(Date.now() / 1000) + 3600) * 1_000_000_000);
+      const timeoutNanos = createIbcTimeoutTimestamp();
 
       // Fetch inbound bridging fee for hop 1
       let hop1InboundBridgingFeeRate = 0;
