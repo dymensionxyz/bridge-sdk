@@ -221,6 +221,86 @@ describe('FeeProvider', () => {
     });
   });
 
+  describe('getDelayedAckBridgingFee', () => {
+    it('should return bridging fee rate from delayedack params', async () => {
+      mockFetch().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          params: {
+            epoch_identifier: 'hour',
+            bridging_fee: '0.0015',
+            delete_packets_epoch_limit: 100,
+          },
+        }),
+      } as Response);
+
+      const provider = new FeeProvider();
+      const rate = await provider.getDelayedAckBridgingFee();
+
+      expect(rate).toBe(0.0015);
+    });
+
+    it('should throw when fetch fails', async () => {
+      mockFetch().mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      } as Response);
+
+      const provider = new FeeProvider();
+      await expect(provider.getDelayedAckBridgingFee()).rejects.toThrow(
+        'Failed to fetch delayedack params: HTTP 500'
+      );
+    });
+
+    it('should cache delayedack params', async () => {
+      mockFetch().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          params: {
+            epoch_identifier: 'hour',
+            bridging_fee: '0.0015',
+            delete_packets_epoch_limit: 100,
+          },
+        }),
+      } as Response);
+
+      const provider = new FeeProvider({ cacheMs: 60000 });
+
+      await provider.getDelayedAckBridgingFee();
+      await provider.getDelayedAckBridgingFee();
+
+      expect(mockFetch()).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('quoteBridgingFee', () => {
+    it('should return fee coins from API', async () => {
+      mockFetch().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          fee_coins: [{ denom: 'adym', amount: '1000000' }],
+        }),
+      } as Response);
+
+      const provider = new FeeProvider();
+      const fees = await provider.quoteBridgingFee('0xhook1', '0xtoken1', 1000000000n);
+
+      expect(fees).toEqual([{ denom: 'adym', amount: '1000000' }]);
+    });
+
+    it('should throw when fetch fails', async () => {
+      mockFetch().mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      } as Response);
+
+      const provider = new FeeProvider();
+      await expect(provider.quoteBridgingFee('0xhook1', '0xtoken1', 1000000n)).rejects.toThrow(
+        'Failed to quote bridging fee: HTTP 404'
+      );
+    });
+  });
+
   describe('clearCache', () => {
     it('should clear all cached values', async () => {
       mockFetch().mockResolvedValue({

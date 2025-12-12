@@ -75,6 +75,7 @@ export type {
   HLFeeHook,
   HLAssetFee,
   IgpQuoteResponse,
+  DelayedAckParams,
 } from './fees/index.js';
 
 // Forward utilities
