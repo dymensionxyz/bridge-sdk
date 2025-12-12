@@ -28,4 +28,8 @@ jobs:
         run: npm run build
 
       - name: Test
-        run: npm test
+        run: npx vitest run
+        env:
+          # Pass RPC secrets if available (optional - tests will skip if not provided)
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+          ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
