@@ -7,7 +7,8 @@
 
 import { toUtf8 } from '@cosmjs/encoding';
 import type { Coin } from '@cosmjs/stargate';
-import { DEFAULT_IGP_GAS, HUB_WARP_ROUTES, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { HUB_WARP_ROUTES, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { getDefaultIgpFee } from '../fees/defaults.js';
 import { evmAddressToHyperlane, kaspaAddressToHyperlane } from '../utils/address.js';
 
 /**
@@ -37,7 +38,7 @@ export interface HubToEvmParams {
   amount: bigint;
   /** Hub sender address (dym1...) */
   sender: string;
-  /** Optional IGP gas amount (default from getDefaultGasAmount) */
+  /** Optional IGP gas amount (default from getDefaultIgpFee) */
   gasAmount?: bigint;
 }
 
@@ -94,7 +95,7 @@ export class HubAdapter {
 
     const msgBytes = toUtf8(JSON.stringify(msg));
 
-    const igpAmount = gasAmount ?? this.getDefaultGasAmount(destination);
+    const igpAmount = gasAmount ?? getDefaultIgpFee(destination);
     const igpDenom = this.getIgpDenom();
 
     const funds: Coin[] = [
@@ -113,13 +114,6 @@ export class HubAdapter {
         funds,
       },
     };
-  }
-
-  /**
-   * Get the default IGP gas amount for a destination chain
-   */
-  private getDefaultGasAmount(destination: number): bigint {
-    return DEFAULT_IGP_GAS[destination as keyof typeof DEFAULT_IGP_GAS] ?? 100_000n;
   }
 
   /**
@@ -173,7 +167,7 @@ export interface HubToKaspaParams {
   amount: bigint;
   /** Network selection */
   network?: 'mainnet' | 'testnet';
-  /** Optional IGP fee in adym (default: 100000000000000000 = 0.1 DYM) */
+  /** Optional IGP fee in adym (default from getDefaultIgpFee) */
   igpFee?: bigint;
 }
 
@@ -196,11 +190,6 @@ export interface MsgRemoteTransfer {
     customHookMetadata: string;
   };
 }
-
-/**
- * Default IGP fee for Hub → Kaspa transfers (0.1 DYM)
- */
-export const DEFAULT_HUB_TO_KASPA_IGP = 100_000_000_000_000_000n;
 
 /**
  * Populate a Hub to Kaspa transfer transaction
@@ -228,12 +217,13 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
     kaspaRecipient,
     amount,
     network = 'mainnet',
-    igpFee = DEFAULT_HUB_TO_KASPA_IGP,
   } = params;
 
   const destinationDomain = network === 'mainnet'
     ? DOMAINS.KASPA_MAINNET
     : DOMAINS.KASPA_TESTNET;
+
+  const igpFee = params.igpFee ?? getDefaultIgpFee(destinationDomain);
 
   // Convert Kaspa address to 32-byte hex (without 0x prefix for the message)
   const recipientHex = kaspaAddressToHyperlane(kaspaRecipient).slice(2);

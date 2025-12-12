@@ -2,8 +2,11 @@
  * Dynamic fee provider for fetching on-chain fee values via REST/LCD
  */
 
-import { DOMAINS } from '../config/constants.js';
-import { DEFAULT_BRIDGING_FEE_RATE, DEFAULT_GAS_AMOUNTS } from './index.js';
+import {
+  DEFAULT_BRIDGING_FEE_RATE,
+  getDefaultIgpFee,
+  getDefaultGasLimit,
+} from './defaults.js';
 
 /**
  * Default Hub REST endpoints
@@ -157,7 +160,7 @@ export class FeeProvider {
     gasLimit?: number;
   }): Promise<bigint> {
     const { destinationDomain, gasLimit } = params;
-    const effectiveGasLimit = gasLimit ?? DEFAULT_GAS_AMOUNTS[destinationDomain] ?? 100_000;
+    const effectiveGasLimit = gasLimit ?? getDefaultGasLimit(destinationDomain);
 
     const cacheKey = `${destinationDomain}-${effectiveGasLimit}`;
     const cached = this.igpQuoteCache.get(cacheKey);
@@ -184,7 +187,7 @@ export class FeeProvider {
       throw new Error('Empty response');
     } catch {
       // Return a reasonable default based on destination
-      return this.getDefaultIgpFee(destinationDomain);
+      return getDefaultIgpFee(destinationDomain);
     }
   }
 
@@ -200,7 +203,8 @@ export class FeeProvider {
     destinationDomain: number;
     gasLimit?: number;
   }): Promise<bigint> {
-    const { rpcUrl, igpAddress, destinationDomain, gasLimit = 100_000 } = params;
+    const { rpcUrl, igpAddress, destinationDomain } = params;
+    const gasLimit = params.gasLimit ?? getDefaultGasLimit(destinationDomain);
 
     const cacheKey = `evm-${igpAddress}-${destinationDomain}-${gasLimit}`;
     const cached = this.igpQuoteCache.get(cacheKey);
@@ -293,23 +297,6 @@ export class FeeProvider {
     this.feeHooksCache.clear();
     this.allFeeHooksCache = null;
     this.igpQuoteCache.clear();
-  }
-
-  /**
-   * Get default IGP fee for destination (fallback)
-   */
-  private getDefaultIgpFee(destinationDomain: number): bigint {
-    // Default fees in adym (18 decimals)
-    const defaults: Record<number, bigint> = {
-      [DOMAINS.ETHEREUM]: 100_000_000_000_000_000n, // 0.1 DYM
-      [DOMAINS.BASE]: 50_000_000_000_000_000n, // 0.05 DYM
-      [DOMAINS.BSC]: 50_000_000_000_000_000n, // 0.05 DYM
-      [DOMAINS.KASPA_MAINNET]: 100_000_000_000_000_000n, // 0.1 DYM
-      [DOMAINS.KASPA_TESTNET]: 100_000_000_000_000_000n, // 0.1 DYM
-      [DOMAINS.SOLANA_MAINNET]: 100_000_000_000_000_000n, // 0.1 DYM
-      [DOMAINS.SOLANA_TESTNET]: 100_000_000_000_000_000n, // 0.1 DYM
-    };
-    return defaults[destinationDomain] ?? 100_000_000_000_000_000n;
   }
 }
 

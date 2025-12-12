@@ -66,8 +66,24 @@ export {
   DEFAULT_BRIDGING_FEE_RATE,
   DEFAULT_EIBC_FEE_PERCENT,
   DEFAULT_GAS_AMOUNTS,
+  // New consolidated defaults
+  DEFAULT_GAS_LIMITS,
+  DEFAULT_IGP_FEES,
+  DEFAULT_IGP_FEE_FALLBACK,
+  getDefaultIgpFee,
+  getDefaultGasLimit,
+  // FeeProvider
+  FeeProvider,
+  createFeeProvider,
+  HUB_REST_ENDPOINTS,
 } from './fees/index.js';
-export type { FeeBreakdown } from './fees/index.js';
+export type {
+  FeeBreakdown,
+  FeeProviderConfig,
+  HLFeeHook,
+  HLAssetFee,
+  IgpQuoteResponse,
+} from './fees/index.js';
 
 // Forward utilities
 export {
@@ -102,7 +118,6 @@ export {
   getMainnetWarpRoutes,
   // Hub to Kaspa (standalone function)
   populateHubToKaspaTx,
-  DEFAULT_HUB_TO_KASPA_IGP,
   // EVM adapter (function-based)
   populateEvmToHubTransfer,
   populateEvmToHubWithForwarding,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { HubAdapter, createHubAdapter, getMainnetWarpRoutes, type HubToEvmParams } from '../hub.js';
-import { HUB_TOKEN_IDS, DOMAINS, DEFAULT_IGP_GAS } from '../../config/constants.js';
+import { HUB_TOKEN_IDS, DOMAINS } from '../../config/constants.js';
+import { getDefaultIgpFee } from '../../fees/defaults.js';
 import { fromUtf8 } from '@cosmjs/encoding';
 
 describe('HubAdapter', () => {
@@ -60,7 +61,7 @@ describe('HubAdapter', () => {
 
       expect(msg.value.funds).toHaveLength(1);
       expect(msg.value.funds[0].denom).toBe('adym');
-      expect(msg.value.funds[0].amount).toBe(DEFAULT_IGP_GAS[DOMAINS.ETHEREUM].toString());
+      expect(msg.value.funds[0].amount).toBe(getDefaultIgpFee(DOMAINS.ETHEREUM).toString());
     });
 
     it('should use custom gas amount when provided', () => {
@@ -76,7 +77,7 @@ describe('HubAdapter', () => {
 
       const decodedMsg = JSON.parse(fromUtf8(msg.value.msg));
       expect(decodedMsg.transfer_remote.dest_domain).toBe(DOMAINS.BASE);
-      expect(msg.value.funds[0].amount).toBe(DEFAULT_IGP_GAS[DOMAINS.BASE].toString());
+      expect(msg.value.funds[0].amount).toBe(getDefaultIgpFee(DOMAINS.BASE).toString());
     });
 
     it('should convert EVM recipient to bytes32 format', () => {
