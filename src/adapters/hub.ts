@@ -1,25 +1,31 @@
 /**
- * Hub adapter for outbound transfers via CosmWasm warp routes
+ * Hub adapter for outbound transfers via native Hyperlane warp module
  *
- * The Hub uses CosmWasm Hyperlane contracts for bridging.
- * This adapter constructs MsgExecuteContract messages to call warp routes.
+ * The Hub uses the native Cosmos SDK Hyperlane warp module for bridging.
+ * This adapter constructs MsgRemoteTransfer messages for cross-chain transfers.
  */
 
-import { toUtf8 } from '@cosmjs/encoding';
 import type { Coin } from '@cosmjs/stargate';
-import { HUB_WARP_ROUTES, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
-import { evmAddressToHyperlane, kaspaAddressToHyperlane } from '../utils/address.js';
+import { DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { evmAddressToHyperlane, kaspaAddressToHyperlane, solanaAddressToHyperlane } from '../utils/address.js';
 
 /**
- * CosmWasm MsgExecuteContract message type
+ * MsgRemoteTransfer for Hyperlane warp module
+ *
+ * This is the native Cosmos SDK message type for Hub outbound transfers.
  */
-export interface MsgExecuteContract {
-  typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract';
+export interface MsgRemoteTransfer {
+  typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer';
   value: {
     sender: string;
-    contract: string;
-    msg: Uint8Array;
-    funds: Coin[];
+    tokenId: string;
+    destinationDomain: number;
+    recipient: string;
+    amount: string;
+    customHookId: string;
+    gasLimit: string;
+    maxFee: Coin;
+    customHookMetadata: string;
   };
 }
 
@@ -42,114 +48,50 @@ export interface HubToEvmParams {
 }
 
 /**
- * Warp route contract address mapping
+ * Populate a Hub to EVM transfer transaction
+ *
+ * Creates a MsgRemoteTransfer for the native Hyperlane warp module.
+ *
+ * @param params - Transfer parameters
+ * @returns MsgRemoteTransfer message ready for signing with CosmJS
+ *
+ * @example
+ * ```typescript
+ * const msg = populateHubToEvmTx({
+ *   tokenId: HUB_TOKEN_IDS.DYM,
+ *   destination: DOMAINS.ETHEREUM,
+ *   recipient: '0x742d35Cc...',
+ *   amount: 1000000000000000000n, // 1 DYM
+ *   sender: 'dym1...',
+ *   igpFee: 1000000n,
+ * });
+ *
+ * const result = await client.signAndBroadcast(sender, [msg], 'auto');
+ * ```
  */
-export interface WarpRouteAddresses {
-  [tokenId: string]: string;
-}
+export function populateHubToEvmTx(params: HubToEvmParams): MsgRemoteTransfer {
+  const { tokenId, destination, recipient, amount, sender, igpFee } = params;
 
-/**
- * Hub adapter for creating warp route transfer transactions
- */
-export class HubAdapter {
-  constructor(
-    private readonly warpRoutes: WarpRouteAddresses,
-    _network: 'mainnet' | 'testnet' = 'mainnet',
-  ) {}
+  // Convert EVM address to 32-byte hex (without 0x prefix for the message)
+  const recipientHex = evmAddressToHyperlane(recipient).slice(2);
 
-  /**
-   * Get the warp route contract address for a token
-   */
-  getWarpRoute(tokenId: string): string {
-    const address = this.warpRoutes[tokenId];
-    if (!address) {
-      throw new Error(`No warp route configured for token ID: ${tokenId}`);
-    }
-    return address;
-  }
-
-  /**
-   * Populate a Hub to EVM transfer transaction
-   *
-   * Creates a MsgExecuteContract that calls the warp route's transfer_remote function.
-   *
-   * @param params - Transfer parameters
-   * @returns CosmWasm execute message ready for signing
-   */
-  populateHubToEvmTx(params: HubToEvmParams): MsgExecuteContract {
-    const { tokenId, destination, recipient, amount, sender, igpFee } = params;
-
-    const warpRouteAddress = this.getWarpRoute(tokenId);
-
-    const recipientBytes32 = evmAddressToHyperlane(recipient);
-    const recipientHex = recipientBytes32.slice(2);
-
-    const msg = {
-      transfer_remote: {
-        dest_domain: destination,
-        recipient: recipientHex,
-        amount: amount.toString(),
-      },
-    };
-
-    const msgBytes = toUtf8(JSON.stringify(msg));
-    const igpDenom = this.getIgpDenom();
-
-    const funds: Coin[] = [
-      {
-        denom: igpDenom,
+  return {
+    typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
+    value: {
+      sender,
+      tokenId,
+      destinationDomain: destination,
+      recipient: recipientHex,
+      amount: amount.toString(),
+      customHookId: '',
+      gasLimit: '0',
+      maxFee: {
+        denom: 'adym',
         amount: igpFee.toString(),
       },
-    ];
-
-    return {
-      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
-      value: {
-        sender,
-        contract: warpRouteAddress,
-        msg: msgBytes,
-        funds,
-      },
-    };
-  }
-
-  /**
-   * Get the IGP payment denomination
-   */
-  private getIgpDenom(): string {
-    return 'adym';
-  }
-
-  /**
-   * Validate that a token ID is supported
-   */
-  isTokenSupported(tokenId: string): boolean {
-    return tokenId in this.warpRoutes;
-  }
-
-  /**
-   * Get all supported token IDs
-   */
-  getSupportedTokens(): string[] {
-    return Object.keys(this.warpRoutes);
-  }
-}
-
-/**
- * Create a Hub adapter with default warp route addresses
- */
-export function createHubAdapter(
-  warpRoutes: WarpRouteAddresses,
-  network: 'mainnet' | 'testnet' = 'mainnet',
-): HubAdapter {
-  return new HubAdapter(warpRoutes, network);
-}
-
-/**
- * Utility to get default warp route addresses for mainnet
- */
-export function getMainnetWarpRoutes(): WarpRouteAddresses {
-  return HUB_WARP_ROUTES;
+      customHookMetadata: '',
+    },
+  };
 }
 
 /**
@@ -169,30 +111,9 @@ export interface HubToKaspaParams {
 }
 
 /**
- * MsgRemoteTransfer for Hyperlane warp module
- *
- * This is the native Cosmos SDK message type for Hub → Kaspa transfers.
- */
-export interface MsgRemoteTransfer {
-  typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer';
-  value: {
-    sender: string;
-    tokenId: string;
-    destinationDomain: number;
-    recipient: string;
-    amount: string;
-    customHookId: string;
-    gasLimit: string;
-    maxFee: Coin;
-    customHookMetadata: string;
-  };
-}
-
-/**
  * Populate a Hub to Kaspa transfer transaction
  *
  * Creates a MsgRemoteTransfer for the Hyperlane warp module.
- * This is a standalone function that doesn't require the HubAdapter class.
  *
  * @param params - Transfer parameters
  * @returns MsgRemoteTransfer message ready for signing with CosmJS
@@ -203,6 +124,7 @@ export interface MsgRemoteTransfer {
  *   sender: 'dym1...',
  *   kaspaRecipient: 'kaspa:qr...',
  *   amount: 5_000_000_000n, // 50 KAS
+ *   igpFee: 1000000n,
  * });
  *
  * const result = await client.signAndBroadcast(sender, [msg], 'auto');
@@ -229,6 +151,68 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
     value: {
       sender,
       tokenId: HUB_TOKEN_IDS.KAS,
+      destinationDomain,
+      recipient: recipientHex,
+      amount: amount.toString(),
+      customHookId: '',
+      gasLimit: '0',
+      maxFee: {
+        denom: 'adym',
+        amount: igpFee.toString(),
+      },
+      customHookMetadata: '',
+    },
+  };
+}
+
+/**
+ * Parameters for Hub to Solana transfer
+ */
+export interface HubToSolanaParams {
+  /** Hub token ID */
+  tokenId: string;
+  /** Solana recipient address (base58 public key) */
+  recipient: string;
+  /** Amount in smallest unit */
+  amount: bigint;
+  /** Hub sender address (dym1...) */
+  sender: string;
+  /** Network selection */
+  network?: 'mainnet' | 'testnet';
+  /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
+}
+
+/**
+ * Populate a Hub to Solana transfer transaction
+ *
+ * Creates a MsgRemoteTransfer for the Hyperlane warp module.
+ *
+ * @param params - Transfer parameters
+ * @returns MsgRemoteTransfer message ready for signing with CosmJS
+ */
+export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTransfer {
+  const {
+    tokenId,
+    recipient,
+    amount,
+    sender,
+    network = 'mainnet',
+    igpFee,
+  } = params;
+
+  const destinationDomain = network === 'mainnet'
+    ? DOMAINS.SOLANA_MAINNET
+    : DOMAINS.SOLANA_TESTNET;
+
+  // Convert Solana address to 32-byte hex (without 0x prefix for the message)
+  const recipientHex = solanaAddressToHyperlane(recipient).slice(2);
+
+  return {
+    typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
+    value: {
+      sender,
+      tokenId,
       destinationDomain,
       recipient: recipientHex,
       amount: amount.toString(),

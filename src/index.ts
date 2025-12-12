@@ -113,12 +113,10 @@ export {
 
 // Adapters
 export {
-  // Hub adapter (class-based)
-  HubAdapter,
-  createHubAdapter,
-  getMainnetWarpRoutes,
-  // Hub to Kaspa (standalone function)
+  // Hub adapter (standalone functions for native warp module)
+  populateHubToEvmTx,
   populateHubToKaspaTx,
+  populateHubToSolanaTx,
   // EVM adapter (function-based)
   populateEvmToHubTransfer,
   populateEvmToHubWithForwarding,
@@ -137,12 +135,10 @@ export type {
   KaspaDepositParams,
   HubToEvmParams,
   HubToKaspaParams,
+  HubToSolanaParams,
   MsgRemoteTransfer,
-  WarpRouteAddresses,
-  MsgExecuteContract,
   EvmToHubTransferParams,
   EvmToHubWithForwardingParams,
   SolanaToHubParams,
   SolanaToHubWithForwardingParams,
-  HubToSolanaParams,
 } from './adapters/index.js';

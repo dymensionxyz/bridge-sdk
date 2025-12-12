@@ -14,14 +14,13 @@ import {
   multiplyByRate,
 } from './fees/index.js';
 import {
-  createHubAdapter,
+  populateHubToEvmTx as populateHubToEvmTxAdapter,
   populateHubToKaspaTx,
-  type MsgExecuteContract,
+  populateHubToSolanaTx as populateHubToSolanaTxAdapter,
   type MsgRemoteTransfer,
 } from './adapters/hub.js';
 import { serializeKaspaDepositPayload } from './adapters/kaspa.js';
 import { createRollAppToHyperlaneMemo } from './forward/memo.js';
-import { HUB_WARP_ROUTES } from './config/constants.js';
 import {
   getChainConfig,
   getHyperlaneDomain,
@@ -130,7 +129,7 @@ export interface TransferResult {
   /** Type of transaction returned */
   type: 'evm' | 'cosmos' | 'solana';
   /** The unsigned transaction, type depends on 'type' field */
-  tx: PopulatedTransaction | MsgExecuteContract | MsgTransfer | unknown;
+  tx: PopulatedTransaction | MsgRemoteTransfer | MsgTransfer | unknown;
   /** Route description */
   route: {
     from: ChainName;
@@ -179,39 +178,27 @@ export class BridgeClient {
 
   /**
    * Create unsigned transaction for Hub -> EVM transfer
+   *
+   * Uses MsgRemoteTransfer for the native Hyperlane warp module.
    */
-  async populateHubToEvmTx(params: HubToEvmParams): Promise<MsgExecuteContract> {
-    const warpRoutes = this.config.contractOverrides?.warpRoutes ?? HUB_WARP_ROUTES;
-    const hubAdapter = createHubAdapter(warpRoutes, this.config.network);
-
-    return hubAdapter.populateHubToEvmTx(params);
+  async populateHubToEvmTx(params: HubToEvmParams): Promise<MsgRemoteTransfer> {
+    return populateHubToEvmTxAdapter(params);
   }
 
   /**
    * Create unsigned transaction for Hub -> Solana transfer
+   *
+   * Uses MsgRemoteTransfer for the native Hyperlane warp module.
    */
-  async populateHubToSolanaTx(params: HubToSolanaParams): Promise<unknown> {
-    const { tokenId, recipient, amount, sender, maxFee } = params;
-
-    const solanaDomain = this.config.network === 'mainnet'
-      ? 1399811149
-      : 1399811150;
-
-    return {
-      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
-      value: {
-        sender,
-        contract: tokenId,
-        msg: Buffer.from(JSON.stringify({
-          transfer_remote: {
-            dest_domain: solanaDomain,
-            recipient,
-            amount: amount.toString(),
-          },
-        })),
-        funds: maxFee ? [maxFee] : [],
-      },
-    };
+  async populateHubToSolanaTx(params: HubToSolanaParams): Promise<MsgRemoteTransfer> {
+    return populateHubToSolanaTxAdapter({
+      tokenId: params.tokenId,
+      recipient: params.recipient,
+      amount: params.amount,
+      sender: params.sender,
+      network: this.config.network,
+      igpFee: params.maxFee?.amount ? BigInt(params.maxFee.amount) : 0n,
+    });
   }
 
   /**

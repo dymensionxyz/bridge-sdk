@@ -32,16 +32,6 @@ export interface SolanaToHubParams {
   rpcUrl: string;
 }
 
-/**
- * Parameters for Hub to Solana transfers (Hub-side execution)
- */
-export interface HubToSolanaParams {
-  tokenId: string;
-  recipient: string;
-  amount: bigint;
-  sender: string;
-  network?: 'mainnet' | 'testnet';
-}
 
 /**
  * Parameters for Solana to Hub transfers with forwarding
