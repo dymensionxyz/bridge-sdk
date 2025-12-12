@@ -5,9 +5,10 @@
 import type { PopulatedTransaction } from 'ethers';
 import type { DymensionBridgeConfig, ResolvedConfig } from './config/types.js';
 import { createConfig } from './config/index.js';
-import type { FeeBreakdown } from './fees/index.js';
+import type { FeeBreakdown, ForwardingRouteType } from './fees/index.js';
 import {
   calculateBridgingFee,
+  calculateForwardingFees,
   FeeProvider,
   createFeeProvider,
 } from './fees/index.js';
@@ -625,6 +626,13 @@ export class BridgeClient {
 
   /**
    * Transfer between two external chains via Hub (with forwarding)
+   *
+   * This method properly calculates fees for both hops:
+   * - Hop 1: source -> Hub (inbound bridging fee deducted from amount)
+   * - Hop 2: Hub -> destination (IGP fee + outbound bridging fee)
+   *
+   * The forwarding metadata uses calculated amounts that ensure sufficient budget
+   * for both hops, satisfying the x/forward constraint: maxFee + forwardAmount <= hubBudget
    */
   private async transferViaHub(params: TransferParams): Promise<TransferResult> {
     const { from, to, token, amount, recipient, sender, fallbackRecipient, rpcUrl } = params;
@@ -632,11 +640,24 @@ export class BridgeClient {
 
     const fromConfig = getChainConfig(from);
     const toConfig = getChainConfig(to);
+    const tokenId = getHubTokenId(token);
 
     // Need a fallback recipient on Hub
     const hubFallback = fallbackRecipient || sender;
     if (!hubFallback.startsWith('dym1')) {
       throw new Error('fallbackRecipient must be a Dymension address (dym1...) for forwarding transfers');
+    }
+
+    // Determine the forwarding route type
+    let routeType: ForwardingRouteType;
+    const hop2IsHL = toConfig.type === 'hyperlane' || toConfig.type === 'hub';
+
+    if (fromConfig.type === 'hyperlane') {
+      routeType = hop2IsHL ? 'hl-hub-hl' : 'hl-hub-ibc';
+    } else if (fromConfig.type === 'ibc') {
+      routeType = hop2IsHL ? 'ibc-hub-hl' : 'rollapp-hub-ibc'; // Will throw below for IBC sources
+    } else {
+      throw new Error(`Unsupported source chain type for forwarding: ${fromConfig.type}`);
     }
 
     // Build forwarding metadata based on destination
@@ -645,6 +666,33 @@ export class BridgeClient {
     if (toConfig.type === 'hyperlane' || toConfig.type === 'hub') {
       // Forward to another Hyperlane chain
       const destDomain = getHyperlaneDomain(to, network);
+
+      // Fetch fees dynamically for proper calculation
+      const hop2IgpFee = await this.feeProvider.quoteIgpPayment({
+        destinationDomain: destDomain,
+        gasLimit: 200_000,
+      });
+
+      // Fetch bridging fee rates
+      let hop1InboundBridgingFeeRate = 0;
+      let hop2OutboundBridgingFeeRate = 0;
+      try {
+        hop1InboundBridgingFeeRate = await this.feeProvider.getBridgingFeeRate(tokenId, 'inbound');
+        hop2OutboundBridgingFeeRate = await this.feeProvider.getBridgingFeeRate(tokenId, 'outbound');
+      } catch {
+        // Use defaults if fee hooks not found
+        hop1InboundBridgingFeeRate = 0.001;
+        hop2OutboundBridgingFeeRate = 0.001;
+      }
+
+      // Calculate forwarding fees to get correct amounts
+      const fwdCalc = calculateForwardingFees({
+        amount,
+        routeType,
+        hop1InboundBridgingFeeRate,
+        hop2IgpFee,
+        hop2OutboundBridgingFeeRate,
+      });
 
       let recipientBytes32: string;
       if (to === 'kaspa') {
@@ -655,26 +703,42 @@ export class BridgeClient {
         recipientBytes32 = evmAddressToHyperlane(recipient);
       }
 
+      // Use calculated forwardAmount and maxFee from the fee calculator
       metadata = createHLMetadataForHL({
         transfer: {
-          tokenId: getHubTokenId(token),
+          tokenId,
           destinationDomain: destDomain,
           recipient: recipientBytes32,
-          amount: amount.toString(),
-          maxFee: { denom: 'adym', amount: '1000000' }, // Default 1 DYM max fee
+          amount: fwdCalc.forwardAmount.toString(),
+          maxFee: { denom: 'adym', amount: fwdCalc.maxFee.toString() },
         },
       });
     } else if (toConfig.type === 'ibc') {
       // Forward to IBC chain
+      // Note: For IBC destinations, the amount forwarded is the hubBudget minus any fees
+      // IBC transfers don't have IGP fees, but may have other fees
+
       const channel = getIBCChannelFromHub(to);
       const hubDenom = getHubDenom(token);
-      const timeoutNanos = BigInt((Math.floor(Date.now() / 1000) + 3600) * 1_000_000_000); // 1 hour timeout
+      const timeoutNanos = BigInt((Math.floor(Date.now() / 1000) + 3600) * 1_000_000_000);
+
+      // Fetch inbound bridging fee for hop 1
+      let hop1InboundBridgingFeeRate = 0;
+      try {
+        hop1InboundBridgingFeeRate = await this.feeProvider.getBridgingFeeRate(tokenId, 'inbound');
+      } catch {
+        hop1InboundBridgingFeeRate = 0.001;
+      }
+
+      // Calculate what arrives at Hub after hop 1 fees
+      const inboundFee = calculateBridgingFee(amount, hop1InboundBridgingFeeRate);
+      const hubBudget = amount - inboundFee;
 
       metadata = createHLMetadataForIBC({
         sourceChannel: channel,
         sender: hubFallback,
         receiver: recipient,
-        token: { denom: hubDenom, amount: amount.toString() },
+        token: { denom: hubDenom, amount: hubBudget.toString() },
         timeoutTimestamp: timeoutNanos,
       });
     } else {
