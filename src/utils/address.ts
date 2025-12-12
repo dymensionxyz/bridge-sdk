@@ -179,3 +179,21 @@ export function kaspaAddressToHyperlane(kaspaAddress: string): string {
 
   return '0x' + bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+/**
+ * Convert any chain address to Hyperlane 32-byte hex format
+ *
+ * @param address - Address on the target chain
+ * @param chain - Target chain name ('kaspa', 'solana', or EVM chain)
+ * @returns 32-byte hex string (0x...)
+ */
+export function addressToHyperlane(address: string, chain: string): string {
+  switch (chain) {
+    case 'kaspa':
+      return kaspaAddressToHyperlane(address);
+    case 'solana':
+      return solanaAddressToHyperlane(address);
+    default:
+      return evmAddressToHyperlane(address);
+  }
+}

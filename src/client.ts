@@ -38,12 +38,7 @@ import {
   type TokenChainName,
 } from './config/tokens.js';
 import { createHLMetadataForHL, createHLMetadataForIBC } from './forward/index.js';
-import {
-  evmAddressToHyperlane,
-  kaspaAddressToHyperlane,
-  solanaAddressToHyperlane,
-  createIbcTimeoutTimestamp,
-} from './utils/index.js';
+import { addressToHyperlane, createIbcTimeoutTimestamp } from './utils/index.js';
 
 /**
  * Parameters for Hub to EVM chain transfers
@@ -476,14 +471,7 @@ export class BridgeClient {
       const domain = getHyperlaneDomain(to, network);
 
       // Convert recipient to Hyperlane bytes32 format
-      let recipientBytes32: string;
-      if (to === 'kaspa') {
-        recipientBytes32 = kaspaAddressToHyperlane(recipient);
-      } else if (to === 'solana') {
-        recipientBytes32 = solanaAddressToHyperlane(recipient);
-      } else {
-        recipientBytes32 = evmAddressToHyperlane(recipient);
-      }
+      const recipientBytes32 = addressToHyperlane(recipient, to);
 
       // Fetch IGP fee from chain
       const igpFee = await this.feeProvider.quoteIgpPayment({
@@ -694,14 +682,7 @@ export class BridgeClient {
         hop2OutboundBridgingFeeRate,
       });
 
-      let recipientBytes32: string;
-      if (to === 'kaspa') {
-        recipientBytes32 = kaspaAddressToHyperlane(recipient);
-      } else if (to === 'solana') {
-        recipientBytes32 = solanaAddressToHyperlane(recipient);
-      } else {
-        recipientBytes32 = evmAddressToHyperlane(recipient);
-      }
+      const recipientBytes32 = addressToHyperlane(recipient, to);
 
       // Use calculated forwardAmount and maxFee from the fee calculator
       metadata = createHLMetadataForHL({
