@@ -2,19 +2,22 @@
  * Hardcoded constants for Dymension bridging
  */
 
+import { getHyperlaneDomain } from './chains.js';
+
 /**
  * Hyperlane domain IDs for supported chains
+ * @deprecated Use getHyperlaneDomain() instead
  */
 export const DOMAINS = {
-  DYMENSION_MAINNET: 1570310961,
-  DYMENSION_TESTNET: 482195613,
-  KASPA_MAINNET: 1082673309,
-  KASPA_TESTNET: 80808082,
-  ETHEREUM: 1,
-  BASE: 8453,
-  BSC: 56,
-  SOLANA_MAINNET: 1399811149,
-  SOLANA_TESTNET: 1399811150,
+  DYMENSION_MAINNET: getHyperlaneDomain('dymension', 'mainnet'),
+  DYMENSION_TESTNET: getHyperlaneDomain('dymension', 'testnet'),
+  KASPA_MAINNET: getHyperlaneDomain('kaspa', 'mainnet'),
+  KASPA_TESTNET: getHyperlaneDomain('kaspa', 'testnet'),
+  ETHEREUM: getHyperlaneDomain('ethereum', 'mainnet'),
+  BASE: getHyperlaneDomain('base', 'mainnet'),
+  BSC: getHyperlaneDomain('bsc', 'mainnet'),
+  SOLANA_MAINNET: getHyperlaneDomain('solana', 'mainnet'),
+  SOLANA_TESTNET: getHyperlaneDomain('solana', 'testnet'),
 } as const;
 
 /**
