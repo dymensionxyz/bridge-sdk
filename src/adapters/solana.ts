@@ -16,7 +16,7 @@ import {
 } from '@solana/web3.js';
 import { getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from '@solana/spl-token';
 import { DOMAINS, SOLANA } from '../config/constants.js';
-import { cosmosAddressToHyperlane } from '../utils/address.js';
+import { cosmosAddressToHyperlane, hexToBytes } from '../utils/index.js';
 
 const SEALEVEL_SPL_NOOP_ADDRESS = 'noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV';
 
@@ -230,17 +230,6 @@ function serializeTransferRemoteInstruction(
   return buffer;
 }
 
-/**
- * Helper: convert hex string to bytes
- */
-function hexToBytes(hex: string): Uint8Array {
-  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(cleanHex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
 
 /**
  * Derive associated token account for a given owner
