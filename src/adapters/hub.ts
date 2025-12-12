@@ -54,7 +54,7 @@ export interface WarpRouteAddresses {
 export class HubAdapter {
   constructor(
     private readonly warpRoutes: WarpRouteAddresses,
-    private readonly network: 'mainnet' | 'testnet' = 'mainnet',
+    _network: 'mainnet' | 'testnet' = 'mainnet',
   ) {}
 
   /**
@@ -117,7 +117,7 @@ export class HubAdapter {
    * Get the IGP payment denomination
    */
   private getIgpDenom(): string {
-    return this.network === 'mainnet' ? 'adym' : 'adym';
+    return 'adym';
   }
 
   /**
