@@ -6,12 +6,25 @@ import type { PopulatedTransaction } from 'ethers';
 import type { DymensionBridgeConfig, ResolvedConfig } from './config/types.js';
 import { createConfig } from './config/index.js';
 import type { FeeBreakdown } from './fees/index.js';
-import { createHubAdapter, type MsgExecuteContract } from './adapters/hub.js';
+import {
+  calculateBridgingFee,
+  DEFAULT_BRIDGING_FEE_RATE,
+  DEFAULT_GAS_AMOUNTS,
+} from './fees/index.js';
+import {
+  createHubAdapter,
+  populateHubToKaspaTx,
+  type MsgExecuteContract,
+  type MsgRemoteTransfer,
+} from './adapters/hub.js';
+import { serializeKaspaDepositPayload } from './adapters/kaspa.js';
+import { createRollAppToHyperlaneMemo } from './forward/memo.js';
 import { HUB_WARP_ROUTES } from './config/constants.js';
 import {
   getChainConfig,
   getHyperlaneDomain,
   getIBCChannelFromHub,
+  getIBCChannelToHub,
   type ChainName,
 } from './config/chains.js';
 import {
@@ -114,12 +127,29 @@ export interface TransferResult {
   /** Type of transaction returned */
   type: 'evm' | 'cosmos' | 'solana';
   /** The unsigned transaction, type depends on 'type' field */
-  tx: PopulatedTransaction | MsgExecuteContract | unknown;
+  tx: PopulatedTransaction | MsgExecuteContract | MsgTransfer | unknown;
   /** Route description */
   route: {
     from: ChainName;
     to: ChainName;
     via: 'direct' | 'hub';
+  };
+}
+
+/**
+ * IBC MsgTransfer message structure
+ */
+export interface MsgTransfer {
+  typeUrl: '/ibc.applications.transfer.v1.MsgTransfer';
+  value: {
+    sourcePort: string;
+    sourceChannel: string;
+    token: { denom: string; amount: string };
+    sender: string;
+    receiver: string;
+    timeoutHeight: { revisionNumber: bigint; revisionHeight: bigint };
+    timeoutTimestamp: bigint;
+    memo: string;
   };
 }
 
@@ -172,10 +202,22 @@ export class BridgeClient {
 
   /**
    * Create unsigned transaction for Hub -> Kaspa transfer
+   *
+   * Uses MsgRemoteTransfer for the Hyperlane warp module (native SDK message).
    */
-  async populateHubToKaspaTx(_params: HubToEvmParams): Promise<unknown> {
-    // TODO: Implement
-    throw new Error('Not implemented');
+  async populateHubToKaspaTx(params: {
+    kaspaRecipient: string;
+    amount: bigint;
+    sender: string;
+    igpFee?: bigint;
+  }): Promise<MsgRemoteTransfer> {
+    return populateHubToKaspaTx({
+      sender: params.sender,
+      kaspaRecipient: params.kaspaRecipient,
+      amount: params.amount,
+      network: this.config.network,
+      igpFee: params.igpFee,
+    });
   }
 
   /**
@@ -200,36 +242,102 @@ export class BridgeClient {
 
   /**
    * Create Kaspa deposit payload (not full transaction)
+   *
+   * Since Kaspa has no smart contracts, this creates a Hyperlane message payload
+   * that must be included in a Kaspa transaction to the escrow address.
+   *
+   * @param params - Deposit parameters
+   * @returns Serialized Hyperlane message bytes to include in Kaspa tx
    */
-  createKaspaDepositPayload(_params: {
+  createKaspaDepositPayload(params: {
     hubRecipient: string;
     amount: bigint;
   }): Uint8Array {
-    // TODO: Implement
-    throw new Error('Not implemented');
+    return serializeKaspaDepositPayload({
+      hubRecipient: params.hubRecipient,
+      amount: params.amount,
+      network: this.config.network,
+    });
   }
 
   /**
    * Create forwarding memo for RollApp -> EVM via EIBC
+   *
+   * Creates the JSON memo to include in an IBC MsgTransfer from RollApp
+   * that will be forwarded via Hyperlane after arriving on Hub.
+   *
+   * @param params - Forwarding parameters
+   * @returns JSON memo string to include in IBC MsgTransfer
    */
-  createRollAppToEvmMemo(_params: {
-    eibcFeePercent: number;
+  createRollAppToEvmMemo(params: {
+    eibcFee: string;
     tokenId: string;
     destinationDomain: number;
     recipient: string;
     amount: string;
     maxFee: { denom: string; amount: string };
   }): string {
-    // TODO: Implement using forward/memo.ts
-    throw new Error('Not implemented');
+    return createRollAppToHyperlaneMemo({
+      eibcFee: params.eibcFee,
+      transfer: {
+        tokenId: params.tokenId,
+        destinationDomain: params.destinationDomain,
+        recipient: params.recipient,
+        amount: params.amount,
+        maxFee: params.maxFee,
+      },
+    });
   }
 
   /**
    * Estimate all fees for a bridge transfer
+   *
+   * Calculates approximate fees for different transfer scenarios:
+   * - Bridging fee (protocol fee, typically 0.1%)
+   * - EIBC fee for RollApp withdrawals (if applicable)
+   * - IGP fee for Hyperlane gas costs
+   * - Transaction fee on source chain (estimated)
+   *
+   * @param params - Fee estimation parameters
+   * @returns Breakdown of all fees and recipient amount
    */
-  async estimateFees(_params: EstimateFeesParams): Promise<FeeBreakdown> {
-    // TODO: Implement
-    throw new Error('Not implemented');
+  async estimateFees(params: EstimateFeesParams): Promise<FeeBreakdown> {
+    const { source, destination, amount, eibcFeePercent } = params;
+    const network = this.config.network;
+
+    // Calculate bridging fee (protocol fee)
+    const bridgingFee = calculateBridgingFee(amount, DEFAULT_BRIDGING_FEE_RATE);
+
+    // Calculate EIBC fee if this is a RollApp withdrawal
+    let eibcFee: bigint | undefined;
+    const sourceConfig = getChainConfig(source as ChainName);
+    if (sourceConfig.type === 'ibc' && eibcFeePercent !== undefined) {
+      eibcFee = BigInt(Math.floor(Number(amount) * (eibcFeePercent / 100)));
+    }
+
+    // Calculate IGP fee based on destination
+    let igpFee = 0n;
+    const destConfig = getChainConfig(destination as ChainName);
+    if (destConfig.type === 'hyperlane' || destConfig.type === 'hub') {
+      const domain = getHyperlaneDomain(destination as ChainName, network);
+      igpFee = BigInt(DEFAULT_GAS_AMOUNTS[domain] ?? 100_000);
+    }
+
+    // Estimate transaction fee (varies by chain, use placeholder)
+    const txFee = 50_000n; // Placeholder - actual fee depends on chain and gas price
+
+    // Calculate totals
+    const totalFees = bridgingFee + (eibcFee ?? 0n) + igpFee + txFee;
+    const recipientReceives = amount - bridgingFee - (eibcFee ?? 0n);
+
+    return {
+      bridgingFee,
+      eibcFee,
+      igpFee,
+      txFee,
+      totalFees,
+      recipientReceives,
+    };
   }
 
   // ============================================
@@ -365,7 +473,36 @@ export class BridgeClient {
       };
     }
 
-    throw new Error(`Transfer from Hub to ${to} not yet implemented`);
+    // Handle IBC chain destinations
+    if (toConfig.type === 'ibc') {
+      const channel = getIBCChannelFromHub(to);
+      const denom = getHubDenom(token);
+
+      // 1 hour timeout from now
+      const timeoutTimestamp = BigInt((Math.floor(Date.now() / 1000) + 3600) * 1_000_000_000);
+
+      const tx: MsgTransfer = {
+        typeUrl: '/ibc.applications.transfer.v1.MsgTransfer',
+        value: {
+          sourcePort: 'transfer',
+          sourceChannel: channel,
+          token: { denom, amount: amount.toString() },
+          sender,
+          receiver: recipient,
+          timeoutHeight: { revisionNumber: 0n, revisionHeight: 0n },
+          timeoutTimestamp,
+          memo: '',
+        },
+      };
+
+      return {
+        type: 'cosmos',
+        tx,
+        route: { from: 'dymension', to, via: 'direct' },
+      };
+    }
+
+    throw new Error(`Transfer from Hub to ${to} not supported: unknown chain type`);
   }
 
   /**
@@ -419,7 +556,40 @@ export class BridgeClient {
       }
     }
 
-    throw new Error(`Transfer from ${from} to Hub not yet implemented`);
+    // Handle IBC chain sources
+    if (fromConfig.type === 'ibc') {
+      const channel = getIBCChannelToHub(from);
+
+      // For IBC transfers, the denom is the native token on the source chain
+      // The SDK consumer needs to know what denom to use on their chain
+      // This is typically the IBC denom of the token on that chain
+      const denom = getHubDenom(token);
+
+      // 1 hour timeout from now
+      const timeoutTimestamp = BigInt((Math.floor(Date.now() / 1000) + 3600) * 1_000_000_000);
+
+      const tx: MsgTransfer = {
+        typeUrl: '/ibc.applications.transfer.v1.MsgTransfer',
+        value: {
+          sourcePort: 'transfer',
+          sourceChannel: channel,
+          token: { denom, amount: amount.toString() },
+          sender,
+          receiver: recipient,
+          timeoutHeight: { revisionNumber: 0n, revisionHeight: 0n },
+          timeoutTimestamp,
+          memo: '',
+        },
+      };
+
+      return {
+        type: 'cosmos',
+        tx,
+        route: { from, to: 'dymension', via: 'direct' },
+      };
+    }
+
+    throw new Error(`Transfer from ${from} to Hub not supported: unknown chain type`);
   }
 
   /**
@@ -523,7 +693,19 @@ export class BridgeClient {
       }
     }
 
-    throw new Error(`Transfer from ${from} to ${to} via Hub not yet implemented`);
+    // IBC source chains (RollApps, Cosmos chains) can use EIBC/PFM forwarding
+    // This requires the IBC memo to contain forwarding instructions
+    if (fromConfig.type === 'ibc') {
+      // For IBC → other chain, we need to use Packet Forward Middleware (PFM)
+      // or EIBC memo forwarding depending on the source chain
+      throw new Error(
+        `Transfer from ${from} to ${to} via Hub requires IBC memo forwarding. ` +
+          `Use createRollAppToEvmMemo() to construct the forwarding memo, ` +
+          `then include it in a standard IBC MsgTransfer.`
+      );
+    }
+
+    throw new Error(`Transfer from ${from} to ${to} via Hub not supported: unknown source chain type`);
   }
 
   /**
