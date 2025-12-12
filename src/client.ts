@@ -8,8 +8,8 @@ import { createConfig } from './config/index.js';
 import type { FeeBreakdown } from './fees/index.js';
 import {
   calculateBridgingFee,
-  DEFAULT_BRIDGING_FEE_RATE,
-  DEFAULT_GAS_AMOUNTS,
+  FeeProvider,
+  createFeeProvider,
 } from './fees/index.js';
 import {
   createHubAdapter,
@@ -51,7 +51,8 @@ export interface HubToEvmParams {
   recipient: string;
   amount: bigint;
   sender: string;
-  gasAmount?: bigint;
+  /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
@@ -96,6 +97,10 @@ export interface EstimateFeesParams {
   destination: string;
   amount: bigint;
   eibcFeePercent?: number;
+  /** Token ID for fetching bridging fee rate */
+  tokenId?: string;
+  /** Gas limit for IGP calculation (defaults to 200000) */
+  gasLimit?: number;
 }
 
 /**
@@ -158,9 +163,20 @@ export interface MsgTransfer {
  */
 export class BridgeClient {
   private config: ResolvedConfig;
+  private feeProvider: FeeProvider;
 
   constructor(userConfig?: DymensionBridgeConfig) {
     this.config = createConfig(userConfig);
+    this.feeProvider = userConfig?.feeProvider ?? createFeeProvider({
+      network: this.config.network,
+    });
+  }
+
+  /**
+   * Get the fee provider instance for direct fee queries
+   */
+  getFeeProvider(): FeeProvider {
+    return this.feeProvider;
   }
 
   /**
@@ -209,7 +225,8 @@ export class BridgeClient {
     kaspaRecipient: string;
     amount: bigint;
     sender: string;
-    igpFee?: bigint;
+    /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+    igpFee: bigint;
   }): Promise<MsgRemoteTransfer> {
     return populateHubToKaspaTx({
       sender: params.sender,
@@ -293,20 +310,23 @@ export class BridgeClient {
    * Estimate all fees for a bridge transfer
    *
    * Calculates approximate fees for different transfer scenarios:
-   * - Bridging fee (protocol fee, typically 0.1%)
+   * - Bridging fee (protocol fee, fetched dynamically or default 0.1%)
    * - EIBC fee for RollApp withdrawals (if applicable)
-   * - IGP fee for Hyperlane gas costs
+   * - IGP fee for Hyperlane gas costs (fetched dynamically)
    * - Transaction fee on source chain (estimated)
    *
    * @param params - Fee estimation parameters
    * @returns Breakdown of all fees and recipient amount
    */
   async estimateFees(params: EstimateFeesParams): Promise<FeeBreakdown> {
-    const { source, destination, amount, eibcFeePercent } = params;
+    const { source, destination, amount, eibcFeePercent, tokenId, gasLimit } = params;
     const network = this.config.network;
 
-    // Calculate bridging fee (protocol fee)
-    const bridgingFee = calculateBridgingFee(amount, DEFAULT_BRIDGING_FEE_RATE);
+    // Get dynamic bridging fee rate from chain
+    const bridgingFeeRate = tokenId
+      ? await this.feeProvider.getBridgingFeeRate(tokenId, 'outbound')
+      : 0.001; // Default 0.1% if no tokenId provided
+    const bridgingFee = calculateBridgingFee(amount, bridgingFeeRate);
 
     // Calculate EIBC fee if this is a RollApp withdrawal
     let eibcFee: bigint | undefined;
@@ -320,7 +340,11 @@ export class BridgeClient {
     const destConfig = getChainConfig(destination as ChainName);
     if (destConfig.type === 'hyperlane' || destConfig.type === 'hub') {
       const domain = getHyperlaneDomain(destination as ChainName, network);
-      igpFee = BigInt(DEFAULT_GAS_AMOUNTS[domain] ?? 100_000);
+      const effectiveGasLimit = gasLimit ?? 200_000;
+      igpFee = await this.feeProvider.quoteIgpPayment({
+        destinationDomain: domain,
+        gasLimit: effectiveGasLimit,
+      });
     }
 
     // Estimate transaction fee (varies by chain, use placeholder)
@@ -458,12 +482,19 @@ export class BridgeClient {
         recipientBytes32 = evmAddressToHyperlane(recipient);
       }
 
+      // Fetch IGP fee from chain
+      const igpFee = await this.feeProvider.quoteIgpPayment({
+        destinationDomain: domain,
+        gasLimit: 200_000,
+      });
+
       const tx = await this.populateHubToEvmTx({
         tokenId,
         destination: domain,
         recipient: recipientBytes32,
         amount,
         sender,
+        igpFee,
       });
 
       return {

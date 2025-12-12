@@ -94,15 +94,3 @@ export const HUB_WARP_ROUTES = {
   [HUB_TOKEN_IDS.KAS]: 'dym1placeholder_kas_warp_route',
 } as const;
 
-/**
- * Default IGP gas amounts by destination domain
- */
-export const DEFAULT_IGP_GAS = {
-  [DOMAINS.ETHEREUM]: 150_000n,
-  [DOMAINS.BASE]: 100_000n,
-  [DOMAINS.BSC]: 100_000n,
-  [DOMAINS.SOLANA_MAINNET]: 200_000n,
-  [DOMAINS.SOLANA_TESTNET]: 200_000n,
-  [DOMAINS.KASPA_MAINNET]: 100_000n,
-  [DOMAINS.KASPA_TESTNET]: 100_000n,
-} as const;

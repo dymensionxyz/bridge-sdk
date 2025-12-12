@@ -7,7 +7,7 @@
 
 import { toUtf8 } from '@cosmjs/encoding';
 import type { Coin } from '@cosmjs/stargate';
-import { DEFAULT_IGP_GAS, HUB_WARP_ROUTES, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { HUB_WARP_ROUTES, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
 import { evmAddressToHyperlane, kaspaAddressToHyperlane } from '../utils/address.js';
 
 /**
@@ -37,8 +37,8 @@ export interface HubToEvmParams {
   amount: bigint;
   /** Hub sender address (dym1...) */
   sender: string;
-  /** Optional IGP gas amount (default from getDefaultGasAmount) */
-  gasAmount?: bigint;
+  /** IGP gas amount in adym (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
@@ -77,7 +77,7 @@ export class HubAdapter {
    * @returns CosmWasm execute message ready for signing
    */
   populateHubToEvmTx(params: HubToEvmParams): MsgExecuteContract {
-    const { tokenId, destination, recipient, amount, sender, gasAmount } = params;
+    const { tokenId, destination, recipient, amount, sender, igpFee } = params;
 
     const warpRouteAddress = this.getWarpRoute(tokenId);
 
@@ -93,14 +93,12 @@ export class HubAdapter {
     };
 
     const msgBytes = toUtf8(JSON.stringify(msg));
-
-    const igpAmount = gasAmount ?? this.getDefaultGasAmount(destination);
     const igpDenom = this.getIgpDenom();
 
     const funds: Coin[] = [
       {
         denom: igpDenom,
-        amount: igpAmount.toString(),
+        amount: igpFee.toString(),
       },
     ];
 
@@ -113,13 +111,6 @@ export class HubAdapter {
         funds,
       },
     };
-  }
-
-  /**
-   * Get the default IGP gas amount for a destination chain
-   */
-  private getDefaultGasAmount(destination: number): bigint {
-    return DEFAULT_IGP_GAS[destination as keyof typeof DEFAULT_IGP_GAS] ?? 100_000n;
   }
 
   /**
@@ -173,8 +164,8 @@ export interface HubToKaspaParams {
   amount: bigint;
   /** Network selection */
   network?: 'mainnet' | 'testnet';
-  /** Optional IGP fee in adym (default: 100000000000000000 = 0.1 DYM) */
-  igpFee?: bigint;
+  /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
@@ -196,11 +187,6 @@ export interface MsgRemoteTransfer {
     customHookMetadata: string;
   };
 }
-
-/**
- * Default IGP fee for Hub → Kaspa transfers (0.1 DYM)
- */
-export const DEFAULT_HUB_TO_KASPA_IGP = 100_000_000_000_000_000n;
 
 /**
  * Populate a Hub to Kaspa transfer transaction
@@ -228,7 +214,7 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
     kaspaRecipient,
     amount,
     network = 'mainnet',
-    igpFee = DEFAULT_HUB_TO_KASPA_IGP,
+    igpFee,
   } = params;
 
   const destinationDomain = network === 'mainnet'
