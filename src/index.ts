@@ -63,16 +63,8 @@ export {
   calculateBridgingFee,
   calculateEibcWithdrawal,
   calculateEibcSendAmount,
-  DEFAULT_BRIDGING_FEE_RATE,
   DEFAULT_EIBC_FEE_PERCENT,
-  DEFAULT_GAS_AMOUNTS,
-  // New consolidated defaults
-  DEFAULT_GAS_LIMITS,
-  DEFAULT_IGP_FEES,
-  DEFAULT_IGP_FEE_FALLBACK,
-  getDefaultIgpFee,
-  getDefaultGasLimit,
-  // FeeProvider
+  // FeeProvider for dynamic fee fetching
   FeeProvider,
   createFeeProvider,
   HUB_REST_ENDPOINTS,

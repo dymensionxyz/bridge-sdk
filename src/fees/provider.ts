@@ -2,12 +2,6 @@
  * Dynamic fee provider for fetching on-chain fee values via REST/LCD
  */
 
-import {
-  DEFAULT_BRIDGING_FEE_RATE,
-  getDefaultIgpFee,
-  getDefaultGasLimit,
-} from './defaults.js';
-
 /**
  * Default Hub REST endpoints
  */
@@ -97,28 +91,25 @@ export class FeeProvider {
    * @param tokenId - Hyperlane token ID (hex address)
    * @param direction - 'inbound' (to Hub) or 'outbound' (from Hub)
    * @returns Fee rate as decimal (e.g., 0.001 for 0.1%)
+   * @throws Error if fee cannot be fetched
    */
   async getBridgingFeeRate(
     tokenId: string,
     direction: 'inbound' | 'outbound'
   ): Promise<number> {
-    try {
-      const hooks = await this.fetchAllFeeHooks();
+    const hooks = await this.fetchAllFeeHooks();
 
-      for (const hook of hooks) {
-        const assetFee = hook.fees.find(
-          (f) => f.token_id.toLowerCase() === tokenId.toLowerCase()
-        );
-        if (assetFee) {
-          const feeStr = direction === 'inbound' ? assetFee.inbound_fee : assetFee.outbound_fee;
-          return parseFloat(feeStr);
-        }
+    for (const hook of hooks) {
+      const assetFee = hook.fees.find(
+        (f) => f.token_id.toLowerCase() === tokenId.toLowerCase()
+      );
+      if (assetFee) {
+        const feeStr = direction === 'inbound' ? assetFee.inbound_fee : assetFee.outbound_fee;
+        return parseFloat(feeStr);
       }
-
-      return DEFAULT_BRIDGING_FEE_RATE;
-    } catch {
-      return DEFAULT_BRIDGING_FEE_RATE;
     }
+
+    throw new Error(`No fee configuration found for token: ${tokenId}`);
   }
 
   /**
@@ -154,41 +145,35 @@ export class FeeProvider {
    *
    * @param params - Quote parameters
    * @returns IGP fee in adym (smallest unit)
+   * @throws Error if quote cannot be fetched
    */
   async quoteIgpPayment(params: {
     destinationDomain: number;
-    gasLimit?: number;
+    gasLimit: number;
   }): Promise<bigint> {
     const { destinationDomain, gasLimit } = params;
-    const effectiveGasLimit = gasLimit ?? getDefaultGasLimit(destinationDomain);
 
-    const cacheKey = `${destinationDomain}-${effectiveGasLimit}`;
+    const cacheKey = `${destinationDomain}-${gasLimit}`;
     const cached = this.igpQuoteCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheMs) {
       return cached.value;
     }
 
-    try {
-      // Try Hub's Hyperlane IGP REST endpoint
-      const url = `${this.hubRestUrl}/hyperlane/v1/igps/0x01/quote_gas_payment?destination_domain=${destinationDomain}&gas_limit=${effectiveGasLimit}`;
-      const response = await fetch(url);
+    const url = `${this.hubRestUrl}/hyperlane/v1/igps/0x01/quote_gas_payment?destination_domain=${destinationDomain}&gas_limit=${gasLimit}`;
+    const response = await fetch(url);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data: IgpQuoteResponse = await response.json();
-      if (data.gas_payment && data.gas_payment.length > 0) {
-        const fee = BigInt(data.gas_payment[0].amount);
-        this.igpQuoteCache.set(cacheKey, { value: fee, timestamp: Date.now() });
-        return fee;
-      }
-
-      throw new Error('Empty response');
-    } catch {
-      // Return a reasonable default based on destination
-      return getDefaultIgpFee(destinationDomain);
+    if (!response.ok) {
+      throw new Error(`IGP quote failed: HTTP ${response.status}`);
     }
+
+    const data: IgpQuoteResponse = await response.json();
+    if (!data.gas_payment || data.gas_payment.length === 0) {
+      throw new Error(`IGP quote returned empty response for domain ${destinationDomain}`);
+    }
+
+    const fee = BigInt(data.gas_payment[0].amount);
+    this.igpQuoteCache.set(cacheKey, { value: fee, timestamp: Date.now() });
+    return fee;
   }
 
   /**
@@ -196,15 +181,15 @@ export class FeeProvider {
    *
    * @param params - Quote parameters
    * @returns IGP fee in wei
+   * @throws Error if quote cannot be fetched
    */
   async quoteEvmIgpPayment(params: {
     rpcUrl: string;
     igpAddress: string;
     destinationDomain: number;
-    gasLimit?: number;
+    gasLimit: number;
   }): Promise<bigint> {
-    const { rpcUrl, igpAddress, destinationDomain } = params;
-    const gasLimit = params.gasLimit ?? getDefaultGasLimit(destinationDomain);
+    const { rpcUrl, igpAddress, destinationDomain, gasLimit } = params;
 
     const cacheKey = `evm-${igpAddress}-${destinationDomain}-${gasLimit}`;
     const cached = this.igpQuoteCache.get(cacheKey);
@@ -212,35 +197,31 @@ export class FeeProvider {
       return cached.value;
     }
 
-    try {
-      // Function selector for quoteGasPayment(uint32,uint256)
-      const selector = 'b2c766e8';
-      const domainHex = destinationDomain.toString(16).padStart(64, '0');
-      const gasHex = gasLimit.toString(16).padStart(64, '0');
-      const data = `0x${selector}${domainHex}${gasHex}`;
+    // Function selector for quoteGasPayment(uint32,uint256)
+    const selector = 'b2c766e8';
+    const domainHex = destinationDomain.toString(16).padStart(64, '0');
+    const gasHex = gasLimit.toString(16).padStart(64, '0');
+    const data = `0x${selector}${domainHex}${gasHex}`;
 
-      const response = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'eth_call',
-          params: [{ to: igpAddress, data }, 'latest'],
-        }),
-      });
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: [{ to: igpAddress, data }, 'latest'],
+      }),
+    });
 
-      const result = await response.json();
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-
-      const fee = BigInt(result.result);
-      this.igpQuoteCache.set(cacheKey, { value: fee, timestamp: Date.now() });
-      return fee;
-    } catch {
-      return 0n;
+    const result = await response.json();
+    if (result.error) {
+      throw new Error(`EVM IGP quote failed: ${result.error.message}`);
     }
+
+    const fee = BigInt(result.result);
+    this.igpQuoteCache.set(cacheKey, { value: fee, timestamp: Date.now() });
+    return fee;
   }
 
   /**

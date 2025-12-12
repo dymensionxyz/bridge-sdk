@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { HubAdapter, createHubAdapter, getMainnetWarpRoutes, type HubToEvmParams } from '../hub.js';
 import { HUB_TOKEN_IDS, DOMAINS } from '../../config/constants.js';
-import { getDefaultIgpFee } from '../../fees/defaults.js';
 import { fromUtf8 } from '@cosmjs/encoding';
 
 describe('HubAdapter', () => {
@@ -12,6 +11,9 @@ describe('HubAdapter', () => {
   };
 
   const adapter = new HubAdapter(warpRoutes, 'mainnet');
+
+  // Test IGP fee (would come from FeeProvider.quoteIgpPayment in production)
+  const TEST_IGP_FEE = 100_000_000_000_000_000n;
 
   describe('getWarpRoute', () => {
     it('should return the correct warp route address for a token', () => {
@@ -34,6 +36,7 @@ describe('HubAdapter', () => {
       recipient: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
       amount: 1000000000000000000n,
       sender: 'dym1testuser',
+      igpFee: TEST_IGP_FEE,
     };
 
     it('should create a valid MsgExecuteContract', () => {
@@ -61,14 +64,14 @@ describe('HubAdapter', () => {
 
       expect(msg.value.funds).toHaveLength(1);
       expect(msg.value.funds[0].denom).toBe('adym');
-      expect(msg.value.funds[0].amount).toBe(getDefaultIgpFee(DOMAINS.ETHEREUM).toString());
+      expect(msg.value.funds[0].amount).toBe(TEST_IGP_FEE.toString());
     });
 
-    it('should use custom gas amount when provided', () => {
-      const customGas = 200_000n;
-      const msg = adapter.populateHubToEvmTx({ ...params, gasAmount: customGas });
+    it('should use provided igpFee', () => {
+      const customIgpFee = 200_000_000_000_000_000n;
+      const msg = adapter.populateHubToEvmTx({ ...params, igpFee: customIgpFee });
 
-      expect(msg.value.funds[0].amount).toBe(customGas.toString());
+      expect(msg.value.funds[0].amount).toBe(customIgpFee.toString());
     });
 
     it('should handle different destination chains', () => {
@@ -77,7 +80,6 @@ describe('HubAdapter', () => {
 
       const decodedMsg = JSON.parse(fromUtf8(msg.value.msg));
       expect(decodedMsg.transfer_remote.dest_domain).toBe(DOMAINS.BASE);
-      expect(msg.value.funds[0].amount).toBe(getDefaultIgpFee(DOMAINS.BASE).toString());
     });
 
     it('should convert EVM recipient to bytes32 format', () => {
@@ -125,6 +127,7 @@ describe('HubAdapter', () => {
         recipient: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
         amount: 1000000000000000000n,
         sender: 'dym1testuser',
+        igpFee: TEST_IGP_FEE,
       });
       expect(msg.value.funds[0].denom).toBe('adym');
     });

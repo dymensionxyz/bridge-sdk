@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FeeProvider, createFeeProvider, HUB_REST_ENDPOINTS } from '../provider.js';
 import { DOMAINS } from '../../config/constants.js';
-import { DEFAULT_BRIDGING_FEE_RATE } from '../index.js';
 
 describe('FeeProvider', () => {
   const originalFetch = global.fetch;
@@ -47,25 +46,23 @@ describe('FeeProvider', () => {
   });
 
   describe('getBridgingFeeRate', () => {
-    it('should return default rate when fetch fails', async () => {
+    it('should throw when fetch fails', async () => {
       mockFetch().mockRejectedValueOnce(new Error('Network error'));
 
       const provider = new FeeProvider();
-      const rate = await provider.getBridgingFeeRate('0x123', 'outbound');
-
-      expect(rate).toBe(DEFAULT_BRIDGING_FEE_RATE);
+      await expect(provider.getBridgingFeeRate('0x123', 'outbound')).rejects.toThrow();
     });
 
-    it('should return default rate when token not found', async () => {
+    it('should throw when token not found', async () => {
       mockFetch().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ fee_hooks: [] }),
       } as Response);
 
       const provider = new FeeProvider();
-      const rate = await provider.getBridgingFeeRate('0xunknown', 'outbound');
-
-      expect(rate).toBe(DEFAULT_BRIDGING_FEE_RATE);
+      await expect(provider.getBridgingFeeRate('0xunknown', 'outbound')).rejects.toThrow(
+        'No fee configuration found for token: 0xunknown'
+      );
     });
 
     it('should return fee rate from API response', async () => {
@@ -95,14 +92,13 @@ describe('FeeProvider', () => {
   });
 
   describe('quoteIgpPayment', () => {
-    it('should return default fee when fetch fails', async () => {
+    it('should throw when fetch fails', async () => {
       mockFetch().mockRejectedValueOnce(new Error('Network error'));
 
       const provider = new FeeProvider();
-      const fee = await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM });
-
-      // Should return default for Ethereum
-      expect(fee).toBe(100_000_000_000_000_000n);
+      await expect(
+        provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 })
+      ).rejects.toThrow();
     });
 
     it('should return fee from API response', async () => {
@@ -114,7 +110,7 @@ describe('FeeProvider', () => {
       } as Response);
 
       const provider = new FeeProvider();
-      const fee = await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM });
+      const fee = await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 });
 
       expect(fee).toBe(50_000_000_000_000_000n);
     });
@@ -129,8 +125,8 @@ describe('FeeProvider', () => {
 
       const provider = new FeeProvider({ cacheMs: 60000 });
 
-      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM });
-      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM });
+      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 });
+      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 });
 
       // Should only fetch once due to caching
       expect(mockFetch()).toHaveBeenCalledTimes(1);
@@ -138,17 +134,18 @@ describe('FeeProvider', () => {
   });
 
   describe('quoteEvmIgpPayment', () => {
-    it('should return 0n when fetch fails', async () => {
+    it('should throw when fetch fails', async () => {
       mockFetch().mockRejectedValueOnce(new Error('Network error'));
 
       const provider = new FeeProvider();
-      const fee = await provider.quoteEvmIgpPayment({
-        rpcUrl: 'https://eth.rpc.com',
-        igpAddress: '0xigp',
-        destinationDomain: DOMAINS.DYMENSION_MAINNET,
-      });
-
-      expect(fee).toBe(0n);
+      await expect(
+        provider.quoteEvmIgpPayment({
+          rpcUrl: 'https://eth.rpc.com',
+          igpAddress: '0xigp',
+          destinationDomain: DOMAINS.DYMENSION_MAINNET,
+          gasLimit: 200000,
+        })
+      ).rejects.toThrow();
     });
 
     it('should return fee from RPC response', async () => {

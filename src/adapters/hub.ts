@@ -8,7 +8,6 @@
 import { toUtf8 } from '@cosmjs/encoding';
 import type { Coin } from '@cosmjs/stargate';
 import { HUB_WARP_ROUTES, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
-import { getDefaultIgpFee } from '../fees/defaults.js';
 import { evmAddressToHyperlane, kaspaAddressToHyperlane } from '../utils/address.js';
 
 /**
@@ -38,8 +37,8 @@ export interface HubToEvmParams {
   amount: bigint;
   /** Hub sender address (dym1...) */
   sender: string;
-  /** Optional IGP gas amount (default from getDefaultIgpFee) */
-  gasAmount?: bigint;
+  /** IGP gas amount in adym (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
@@ -78,7 +77,7 @@ export class HubAdapter {
    * @returns CosmWasm execute message ready for signing
    */
   populateHubToEvmTx(params: HubToEvmParams): MsgExecuteContract {
-    const { tokenId, destination, recipient, amount, sender, gasAmount } = params;
+    const { tokenId, destination, recipient, amount, sender, igpFee } = params;
 
     const warpRouteAddress = this.getWarpRoute(tokenId);
 
@@ -94,14 +93,12 @@ export class HubAdapter {
     };
 
     const msgBytes = toUtf8(JSON.stringify(msg));
-
-    const igpAmount = gasAmount ?? getDefaultIgpFee(destination);
     const igpDenom = this.getIgpDenom();
 
     const funds: Coin[] = [
       {
         denom: igpDenom,
-        amount: igpAmount.toString(),
+        amount: igpFee.toString(),
       },
     ];
 
@@ -167,8 +164,8 @@ export interface HubToKaspaParams {
   amount: bigint;
   /** Network selection */
   network?: 'mainnet' | 'testnet';
-  /** Optional IGP fee in adym (default from getDefaultIgpFee) */
-  igpFee?: bigint;
+  /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
@@ -217,13 +214,12 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
     kaspaRecipient,
     amount,
     network = 'mainnet',
+    igpFee,
   } = params;
 
   const destinationDomain = network === 'mainnet'
     ? DOMAINS.KASPA_MAINNET
     : DOMAINS.KASPA_TESTNET;
-
-  const igpFee = params.igpFee ?? getDefaultIgpFee(destinationDomain);
 
   // Convert Kaspa address to 32-byte hex (without 0x prefix for the message)
   const recipientHex = kaspaAddressToHyperlane(kaspaRecipient).slice(2);

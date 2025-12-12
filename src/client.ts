@@ -8,8 +8,6 @@ import { createConfig } from './config/index.js';
 import type { FeeBreakdown } from './fees/index.js';
 import {
   calculateBridgingFee,
-  DEFAULT_BRIDGING_FEE_RATE,
-  DEFAULT_GAS_AMOUNTS,
   FeeProvider,
   createFeeProvider,
 } from './fees/index.js';
@@ -53,7 +51,8 @@ export interface HubToEvmParams {
   recipient: string;
   amount: bigint;
   sender: string;
-  gasAmount?: bigint;
+  /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
@@ -98,6 +97,10 @@ export interface EstimateFeesParams {
   destination: string;
   amount: bigint;
   eibcFeePercent?: number;
+  /** Token ID for fetching bridging fee rate */
+  tokenId?: string;
+  /** Gas limit for IGP calculation (defaults to 200000) */
+  gasLimit?: number;
 }
 
 /**
@@ -222,7 +225,8 @@ export class BridgeClient {
     kaspaRecipient: string;
     amount: bigint;
     sender: string;
-    igpFee?: bigint;
+    /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+    igpFee: bigint;
   }): Promise<MsgRemoteTransfer> {
     return populateHubToKaspaTx({
       sender: params.sender,
@@ -315,18 +319,13 @@ export class BridgeClient {
    * @returns Breakdown of all fees and recipient amount
    */
   async estimateFees(params: EstimateFeesParams): Promise<FeeBreakdown> {
-    const { source, destination, amount, eibcFeePercent } = params;
+    const { source, destination, amount, eibcFeePercent, tokenId, gasLimit } = params;
     const network = this.config.network;
 
-    // Try to get dynamic bridging fee rate, fallback to default
-    let bridgingFeeRate = DEFAULT_BRIDGING_FEE_RATE;
-    try {
-      // For now we use the default - in future versions we can pass tokenId
-      // and query the specific fee for that token
-      bridgingFeeRate = DEFAULT_BRIDGING_FEE_RATE;
-    } catch {
-      // Use default on error
-    }
+    // Get dynamic bridging fee rate from chain
+    const bridgingFeeRate = tokenId
+      ? await this.feeProvider.getBridgingFeeRate(tokenId, 'outbound')
+      : 0.001; // Default 0.1% if no tokenId provided
     const bridgingFee = calculateBridgingFee(amount, bridgingFeeRate);
 
     // Calculate EIBC fee if this is a RollApp withdrawal
@@ -336,17 +335,16 @@ export class BridgeClient {
       eibcFee = BigInt(Math.floor(Number(amount) * (eibcFeePercent / 100)));
     }
 
-    // Calculate IGP fee based on destination (try dynamic, fallback to static)
+    // Calculate IGP fee based on destination
     let igpFee = 0n;
     const destConfig = getChainConfig(destination as ChainName);
     if (destConfig.type === 'hyperlane' || destConfig.type === 'hub') {
       const domain = getHyperlaneDomain(destination as ChainName, network);
-      try {
-        igpFee = await this.feeProvider.quoteIgpPayment({ destinationDomain: domain });
-      } catch {
-        // Fallback to static default
-        igpFee = BigInt(DEFAULT_GAS_AMOUNTS[domain] ?? 100_000);
-      }
+      const effectiveGasLimit = gasLimit ?? 200_000;
+      igpFee = await this.feeProvider.quoteIgpPayment({
+        destinationDomain: domain,
+        gasLimit: effectiveGasLimit,
+      });
     }
 
     // Estimate transaction fee (varies by chain, use placeholder)
@@ -484,12 +482,19 @@ export class BridgeClient {
         recipientBytes32 = evmAddressToHyperlane(recipient);
       }
 
+      // Fetch IGP fee from chain
+      const igpFee = await this.feeProvider.quoteIgpPayment({
+        destinationDomain: domain,
+        gasLimit: 200_000,
+      });
+
       const tx = await this.populateHubToEvmTx({
         tokenId,
         destination: domain,
         recipient: recipientBytes32,
         amount,
         sender,
+        igpFee,
       });
 
       return {

@@ -3,19 +3,19 @@ import {
   calculateEibcWithdrawal,
   calculateEibcSendAmount,
 } from '../eibc.js';
-import {
-  DEFAULT_BRIDGING_FEE_RATE,
-  DEFAULT_EIBC_FEE_PERCENT,
-} from '../index.js';
+import { DEFAULT_EIBC_FEE_PERCENT } from '../index.js';
+
+// Test bridging fee rate (0.1% = 0.001) - in production, fetch via FeeProvider
+const TEST_BRIDGING_FEE_RATE = 0.001;
 
 describe('EIBC Fee Calculations', () => {
   describe('calculateEibcWithdrawal', () => {
-    it('calculates fees with default rates (0.15% EIBC + 0.1% bridging)', () => {
+    it('calculates fees with default EIBC rate (0.15%) and 0.1% bridging', () => {
       const amount = 1000000n;
       const result = calculateEibcWithdrawal(
         amount,
         DEFAULT_EIBC_FEE_PERCENT,
-        DEFAULT_BRIDGING_FEE_RATE
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(result.eibcFee).toBe(1500n);
@@ -25,7 +25,7 @@ describe('EIBC Fee Calculations', () => {
 
     it('calculates fees with custom EIBC rate (0.5%)', () => {
       const amount = 1000000n;
-      const result = calculateEibcWithdrawal(amount, 0.5);
+      const result = calculateEibcWithdrawal(amount, 0.5, TEST_BRIDGING_FEE_RATE);
 
       expect(result.eibcFee).toBe(5000n);
       expect(result.bridgingFee).toBe(1000n);
@@ -49,7 +49,8 @@ describe('EIBC Fee Calculations', () => {
       const amount = 0n;
       const result = calculateEibcWithdrawal(
         amount,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(result.eibcFee).toBe(0n);
@@ -61,7 +62,8 @@ describe('EIBC Fee Calculations', () => {
       const amount = 1_000_000n * 10n ** 18n;
       const result = calculateEibcWithdrawal(
         amount,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       const expectedEibcFee = 1500n * 10n ** 18n;
@@ -79,7 +81,8 @@ describe('EIBC Fee Calculations', () => {
       amounts.forEach((amount) => {
         const result = calculateEibcWithdrawal(
           amount,
-          DEFAULT_EIBC_FEE_PERCENT
+          DEFAULT_EIBC_FEE_PERCENT,
+          TEST_BRIDGING_FEE_RATE
         );
 
         const totalFees = result.eibcFee + result.bridgingFee;
@@ -91,7 +94,8 @@ describe('EIBC Fee Calculations', () => {
       const amount = 100n;
       const result = calculateEibcWithdrawal(
         amount,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(result.eibcFee).toBe(0n);
@@ -104,25 +108,28 @@ describe('EIBC Fee Calculations', () => {
         {
           amount: 100_000_000n,
           eibcPercent: 0.15,
+          bridgingRate: TEST_BRIDGING_FEE_RATE,
           expectedEibc: 150_000n,
           expectedBridging: 100_000n,
         },
         {
           amount: 1_000_000_000n,
           eibcPercent: 0.5,
+          bridgingRate: TEST_BRIDGING_FEE_RATE,
           expectedEibc: 5_000_000n,
           expectedBridging: 1_000_000n,
         },
         {
           amount: 50_000_000_000n,
           eibcPercent: 1.0,
+          bridgingRate: TEST_BRIDGING_FEE_RATE,
           expectedEibc: 500_000_000n,
           expectedBridging: 50_000_000n,
         },
       ];
 
-      scenarios.forEach(({ amount, eibcPercent, expectedEibc, expectedBridging }) => {
-        const result = calculateEibcWithdrawal(amount, eibcPercent);
+      scenarios.forEach(({ amount, eibcPercent, bridgingRate, expectedEibc, expectedBridging }) => {
+        const result = calculateEibcWithdrawal(amount, eibcPercent, bridgingRate);
         expect(result.eibcFee).toBe(expectedEibc);
         expect(result.bridgingFee).toBe(expectedBridging);
         expect(result.recipientReceives).toBe(
@@ -137,12 +144,14 @@ describe('EIBC Fee Calculations', () => {
       const desired = 997500n;
       const send = calculateEibcSendAmount(
         desired,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       const result = calculateEibcWithdrawal(
         send,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(result.recipientReceives).toBeGreaterThanOrEqual(desired);
@@ -152,7 +161,8 @@ describe('EIBC Fee Calculations', () => {
       const desired = 1000000n;
       const send = calculateEibcSendAmount(
         desired,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(send).toBeGreaterThan(desired);
@@ -162,7 +172,8 @@ describe('EIBC Fee Calculations', () => {
       const desired = 0n;
       const send = calculateEibcSendAmount(
         desired,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(send).toBe(0n);
@@ -170,9 +181,9 @@ describe('EIBC Fee Calculations', () => {
 
     it('handles custom EIBC fee rates', () => {
       const desired = 990000n;
-      const send = calculateEibcSendAmount(desired, 0.5);
+      const send = calculateEibcSendAmount(desired, 0.5, TEST_BRIDGING_FEE_RATE);
 
-      const result = calculateEibcWithdrawal(send, 0.5);
+      const result = calculateEibcWithdrawal(send, 0.5, TEST_BRIDGING_FEE_RATE);
       expect(result.recipientReceives).toBeGreaterThanOrEqual(desired);
     });
 
@@ -202,11 +213,13 @@ describe('EIBC Fee Calculations', () => {
       desiredAmounts.forEach((desired) => {
         const send = calculateEibcSendAmount(
           desired,
-          DEFAULT_EIBC_FEE_PERCENT
+          DEFAULT_EIBC_FEE_PERCENT,
+          TEST_BRIDGING_FEE_RATE
         );
         const result = calculateEibcWithdrawal(
           send,
-          DEFAULT_EIBC_FEE_PERCENT
+          DEFAULT_EIBC_FEE_PERCENT,
+          TEST_BRIDGING_FEE_RATE
         );
         expect(result.recipientReceives).toBeGreaterThanOrEqual(desired);
       });
@@ -216,7 +229,7 @@ describe('EIBC Fee Calculations', () => {
   describe('EIBC edge cases', () => {
     it('handles high EIBC fee rates (5%)', () => {
       const amount = 1000000n;
-      const result = calculateEibcWithdrawal(amount, 5.0);
+      const result = calculateEibcWithdrawal(amount, 5.0, TEST_BRIDGING_FEE_RATE);
 
       expect(result.eibcFee).toBe(50000n);
       expect(result.bridgingFee).toBe(1000n);
@@ -225,7 +238,7 @@ describe('EIBC Fee Calculations', () => {
 
     it('handles very low EIBC fee rates (0.01%)', () => {
       const amount = 1000000n;
-      const result = calculateEibcWithdrawal(amount, 0.01);
+      const result = calculateEibcWithdrawal(amount, 0.01, TEST_BRIDGING_FEE_RATE);
 
       expect(result.eibcFee).toBe(100n);
       expect(result.bridgingFee).toBe(1000n);
@@ -245,7 +258,8 @@ describe('EIBC Fee Calculations', () => {
       const amount = 10n;
       const result = calculateEibcWithdrawal(
         amount,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(result.eibcFee).toBe(0n);
@@ -259,7 +273,8 @@ describe('EIBC Fee Calculations', () => {
       amounts.forEach((amount) => {
         const result = calculateEibcWithdrawal(
           amount,
-          DEFAULT_EIBC_FEE_PERCENT
+          DEFAULT_EIBC_FEE_PERCENT,
+          TEST_BRIDGING_FEE_RATE
         );
 
         expect(result.recipientReceives).toBeGreaterThan(0n);
@@ -271,7 +286,8 @@ describe('EIBC Fee Calculations', () => {
       const largeAmount = BigInt(Number.MAX_SAFE_INTEGER);
       const result = calculateEibcWithdrawal(
         largeAmount,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(result.eibcFee).toBeGreaterThan(0n);
@@ -286,7 +302,7 @@ describe('EIBC Fee Calculations', () => {
       const amount = 10000000n;
       const eibcPercent = 0.5;
 
-      const result = calculateEibcWithdrawal(amount, eibcPercent);
+      const result = calculateEibcWithdrawal(amount, eibcPercent, TEST_BRIDGING_FEE_RATE);
       const expectedEibcFee = BigInt(
         Math.floor(Number(amount) * (eibcPercent / 100))
       );
@@ -315,7 +331,8 @@ describe('EIBC Fee Calculations', () => {
 
       const result = calculateEibcWithdrawal(
         amount,
-        DEFAULT_EIBC_FEE_PERCENT
+        DEFAULT_EIBC_FEE_PERCENT,
+        TEST_BRIDGING_FEE_RATE
       );
 
       expect(result.recipientReceives).toBe(
