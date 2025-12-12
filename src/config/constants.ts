@@ -88,12 +88,3 @@ export const SOLANA = {
  */
 export const HUB_MAILBOX = '0x68797065726c616e650000000000000000000000000000000000000000000000';
 
-/**
- * Hub warp route contract addresses (mainnet)
- */
-export const HUB_WARP_ROUTES = {
-  [HUB_TOKEN_IDS.DYM]: 'dym1placeholder_dym_warp_route',
-  [HUB_TOKEN_IDS.ETH]: 'dym1placeholder_eth_warp_route',
-  [HUB_TOKEN_IDS.KAS]: 'dym1placeholder_kas_warp_route',
-} as const;
-
