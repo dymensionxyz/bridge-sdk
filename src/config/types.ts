@@ -2,6 +2,8 @@
  * Configuration types for the bridge SDK
  */
 
+import type { FeeProvider } from '../fees/provider.js';
+
 /**
  * User-provided configuration (all optional)
  */
@@ -24,6 +26,9 @@ export interface DymensionBridgeConfig {
     igp?: Record<string, string>;
     mailbox?: Record<string, string>;
   };
+
+  /** Custom fee provider for dynamic fee fetching */
+  feeProvider?: FeeProvider;
 }
 
 /**

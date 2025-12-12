@@ -5,6 +5,7 @@
 export * from './bridging.js';
 export * from './eibc.js';
 export * from './types.js';
+export * from './provider.js';
 
 import { DOMAINS } from '../config/constants.js';
 

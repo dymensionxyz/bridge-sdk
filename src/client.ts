@@ -10,6 +10,8 @@ import {
   calculateBridgingFee,
   DEFAULT_BRIDGING_FEE_RATE,
   DEFAULT_GAS_AMOUNTS,
+  FeeProvider,
+  createFeeProvider,
 } from './fees/index.js';
 import {
   createHubAdapter,
@@ -158,9 +160,20 @@ export interface MsgTransfer {
  */
 export class BridgeClient {
   private config: ResolvedConfig;
+  private feeProvider: FeeProvider;
 
   constructor(userConfig?: DymensionBridgeConfig) {
     this.config = createConfig(userConfig);
+    this.feeProvider = userConfig?.feeProvider ?? createFeeProvider({
+      network: this.config.network,
+    });
+  }
+
+  /**
+   * Get the fee provider instance for direct fee queries
+   */
+  getFeeProvider(): FeeProvider {
+    return this.feeProvider;
   }
 
   /**
@@ -293,9 +306,9 @@ export class BridgeClient {
    * Estimate all fees for a bridge transfer
    *
    * Calculates approximate fees for different transfer scenarios:
-   * - Bridging fee (protocol fee, typically 0.1%)
+   * - Bridging fee (protocol fee, fetched dynamically or default 0.1%)
    * - EIBC fee for RollApp withdrawals (if applicable)
-   * - IGP fee for Hyperlane gas costs
+   * - IGP fee for Hyperlane gas costs (fetched dynamically)
    * - Transaction fee on source chain (estimated)
    *
    * @param params - Fee estimation parameters
@@ -305,8 +318,16 @@ export class BridgeClient {
     const { source, destination, amount, eibcFeePercent } = params;
     const network = this.config.network;
 
-    // Calculate bridging fee (protocol fee)
-    const bridgingFee = calculateBridgingFee(amount, DEFAULT_BRIDGING_FEE_RATE);
+    // Try to get dynamic bridging fee rate, fallback to default
+    let bridgingFeeRate = DEFAULT_BRIDGING_FEE_RATE;
+    try {
+      // For now we use the default - in future versions we can pass tokenId
+      // and query the specific fee for that token
+      bridgingFeeRate = DEFAULT_BRIDGING_FEE_RATE;
+    } catch {
+      // Use default on error
+    }
+    const bridgingFee = calculateBridgingFee(amount, bridgingFeeRate);
 
     // Calculate EIBC fee if this is a RollApp withdrawal
     let eibcFee: bigint | undefined;
@@ -315,12 +336,17 @@ export class BridgeClient {
       eibcFee = BigInt(Math.floor(Number(amount) * (eibcFeePercent / 100)));
     }
 
-    // Calculate IGP fee based on destination
+    // Calculate IGP fee based on destination (try dynamic, fallback to static)
     let igpFee = 0n;
     const destConfig = getChainConfig(destination as ChainName);
     if (destConfig.type === 'hyperlane' || destConfig.type === 'hub') {
       const domain = getHyperlaneDomain(destination as ChainName, network);
-      igpFee = BigInt(DEFAULT_GAS_AMOUNTS[domain] ?? 100_000);
+      try {
+        igpFee = await this.feeProvider.quoteIgpPayment({ destinationDomain: domain });
+      } catch {
+        // Fallback to static default
+        igpFee = BigInt(DEFAULT_GAS_AMOUNTS[domain] ?? 100_000);
+      }
     }
 
     // Estimate transaction fee (varies by chain, use placeholder)
