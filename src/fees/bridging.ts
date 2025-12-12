@@ -3,6 +3,24 @@
  */
 
 /**
+ * Precision for bigint decimal arithmetic (18 decimal places)
+ */
+const PRECISION = 10n ** 18n;
+
+/**
+ * Multiply a bigint by a decimal rate using bigint arithmetic to avoid precision loss.
+ * Uses 18 decimal places of precision.
+ *
+ * @param amount - The bigint amount
+ * @param rate - The decimal rate (e.g., 0.001 for 0.1%)
+ * @returns amount * rate (floored)
+ */
+export function multiplyByRate(amount: bigint, rate: number): bigint {
+  const rateBig = BigInt(Math.floor(rate * Number(PRECISION)));
+  return (amount * rateBig) / PRECISION;
+}
+
+/**
  * Calculate the bridging fee for a Hub Hyperlane transfer
  *
  * @param amount - Transfer amount in base units
@@ -13,7 +31,7 @@ export function calculateBridgingFee(
   amount: bigint,
   outboundFeeRate: number
 ): bigint {
-  return BigInt(Math.floor(Number(amount) * outboundFeeRate));
+  return multiplyByRate(amount, outboundFeeRate);
 }
 
 /**
@@ -43,5 +61,9 @@ export function calculateSendAmountForDesired(
   outboundFeeRate: number
 ): bigint {
   // amount = desired / (1 - feeRate)
-  return BigInt(Math.ceil(Number(desiredAmount) / (1 - outboundFeeRate)));
+  // Use bigint arithmetic: amount = desiredAmount * PRECISION / (PRECISION * (1 - feeRate))
+  const rateBig = BigInt(Math.floor(outboundFeeRate * Number(PRECISION)));
+  const oneMinusRate = PRECISION - rateBig;
+  // Round up using: (a + b - 1) / b
+  return (desiredAmount * PRECISION + oneMinusRate - 1n) / oneMinusRate;
 }

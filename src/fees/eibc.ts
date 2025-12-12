@@ -3,6 +3,7 @@
  */
 
 import type { EibcWithdrawalResult } from './types.js';
+import { multiplyByRate } from './bridging.js';
 
 /**
  * Calculate fees for an EIBC withdrawal from a RollApp
@@ -17,12 +18,17 @@ export function calculateEibcWithdrawal(
   eibcFeePercent: number,
   bridgingFeeRate: number
 ): EibcWithdrawalResult {
-  const eibcFee = BigInt(Math.floor(Number(amount) * eibcFeePercent / 100));
-  const bridgingFee = BigInt(Math.floor(Number(amount) * bridgingFeeRate));
+  const eibcFee = multiplyByRate(amount, eibcFeePercent / 100);
+  const bridgingFee = multiplyByRate(amount, bridgingFeeRate);
   const recipientReceives = amount - eibcFee - bridgingFee;
 
   return { eibcFee, bridgingFee, recipientReceives };
 }
+
+/**
+ * Precision for bigint decimal arithmetic (18 decimal places)
+ */
+const PRECISION = 10n ** 18n;
 
 /**
  * Calculate amount to send for desired recipient amount (after EIBC fees)
@@ -39,5 +45,8 @@ export function calculateEibcSendAmount(
 ): bigint {
   // amount = desired / (1 - eibcFee% - bridgingFee%)
   const totalFeeRate = (eibcFeePercent / 100) + bridgingFeeRate;
-  return BigInt(Math.ceil(Number(desiredRecipientAmount) / (1 - totalFeeRate)));
+  const totalFeeRateBig = BigInt(Math.floor(totalFeeRate * Number(PRECISION)));
+  const oneMinusFee = PRECISION - totalFeeRateBig;
+  // Round up using: (a + b - 1) / b
+  return (desiredRecipientAmount * PRECISION + oneMinusFee - 1n) / oneMinusFee;
 }
