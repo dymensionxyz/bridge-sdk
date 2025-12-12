@@ -63,6 +63,9 @@ export {
   calculateBridgingFee,
   calculateEibcWithdrawal,
   calculateEibcSendAmount,
+  calculateForwardingFees,
+  calculateForwardingSendAmount,
+  validateForwardingParams,
   DEFAULT_EIBC_FEE_PERCENT,
   // FeeProvider for dynamic fee fetching
   FeeProvider,
@@ -76,6 +79,11 @@ export type {
   HLAssetFee,
   IgpQuoteResponse,
   DelayedAckParams,
+  ForwardingRouteType,
+  Hop1Fees,
+  Hop2Fees,
+  ForwardingCalculation,
+  ForwardingParams,
 } from './fees/index.js';
 
 // Forward utilities
