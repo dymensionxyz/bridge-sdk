@@ -84,11 +84,8 @@ export async function buildSolanaToHubTx(params: SolanaToHubParams): Promise<Tra
 
   const connection = new Connection(rpcUrl, 'confirmed');
 
-  const mailboxPubKey = deriveMailboxPda(warpProgramPubKey);
-  const tokenPda = deriveHypTokenAccount(warpProgramPubKey);
-  const mailboxOutbox = deriveMailboxOutboxAccount(mailboxPubKey);
-  const dispatchAuthority = deriveMessageDispatchAuthorityAccount(warpProgramPubKey);
-  const msgStorage = deriveMsgStorageAccount(mailboxPubKey, randomWallet.publicKey);
+  const { mailboxPubKey, tokenPda, mailboxOutbox, dispatchAuthority, msgStorage } =
+    deriveWarpProgramPdas(warpProgramPubKey, randomWallet.publicKey);
 
   const keys = [
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -146,6 +143,25 @@ export function getSolanaWarpProgramId(
 ): string {
   const contracts = network === 'mainnet' ? SOLANA.PROGRAMS_MAINNET : SOLANA.PROGRAMS_TESTNET;
   return contracts[token];
+}
+
+/**
+ * Derive all required PDA accounts for Hyperlane warp program operations
+ */
+function deriveWarpProgramPdas(warpProgramPubKey: PublicKey, randomWallet: PublicKey) {
+  const mailboxPubKey = deriveMailboxPda(warpProgramPubKey);
+  const tokenPda = deriveHypTokenAccount(warpProgramPubKey);
+  const mailboxOutbox = deriveMailboxOutboxAccount(mailboxPubKey);
+  const dispatchAuthority = deriveMessageDispatchAuthorityAccount(warpProgramPubKey);
+  const msgStorage = deriveMsgStorageAccount(mailboxPubKey, randomWallet);
+
+  return {
+    mailboxPubKey,
+    tokenPda,
+    mailboxOutbox,
+    dispatchAuthority,
+    msgStorage,
+  };
 }
 
 /**
@@ -280,11 +296,8 @@ export async function buildSolanaToHubWithForwardingTx(
 
   const connection = new Connection(rpcUrl, 'confirmed');
 
-  const mailboxPubKey = deriveMailboxPda(warpProgramPubKey);
-  const tokenPda = deriveHypTokenAccount(warpProgramPubKey);
-  const mailboxOutbox = deriveMailboxOutboxAccount(mailboxPubKey);
-  const dispatchAuthority = deriveMessageDispatchAuthorityAccount(warpProgramPubKey);
-  const msgStorage = deriveMsgStorageAccount(mailboxPubKey, randomWallet.publicKey);
+  const { mailboxPubKey, tokenPda, mailboxOutbox, dispatchAuthority, msgStorage } =
+    deriveWarpProgramPdas(warpProgramPubKey, randomWallet.publicKey);
 
   const keys = [
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
