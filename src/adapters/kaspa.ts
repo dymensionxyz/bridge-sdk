@@ -6,7 +6,7 @@
  */
 
 import { KASPA, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
-import { cosmosAddressToHyperlane } from '../utils/address.js';
+import { cosmosAddressToHyperlane, hexToBytes } from '../utils/index.js';
 
 /**
  * Parameters for Kaspa deposit payload
@@ -153,17 +153,6 @@ export function getKaspaEscrowAddress(network: 'mainnet' | 'testnet' = 'mainnet'
   return network === 'mainnet' ? KASPA.ESCROW_MAINNET : KASPA.ESCROW_TESTNET;
 }
 
-/**
- * Convert hex string to bytes
- */
-function hexToBytes(hex: string): Uint8Array {
-  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(cleanHex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
 
 /**
  * Convert bigint to 32-byte big-endian representation (U256)
