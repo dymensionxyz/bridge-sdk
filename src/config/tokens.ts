@@ -46,7 +46,7 @@ export const TOKENS = {
     displayName: 'Kaspa',
     decimals: 8,
     hubTokenId: '0x726f757465725f61707000000000000000000000000000020000000000000000',
-    hubDenom: 'ibc/TODO_KAS_DENOM',
+    hubDenom: 'hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000000',
     addresses: {
       ethereum: '0x18e6C30487e61B117bDE1218aEf2D9Bd7742c4CF',
       base: '0x9c3dfFBE238B3A472233151a49A99431966De087',
@@ -62,7 +62,7 @@ export const TOKENS = {
     displayName: 'Ethereum',
     decimals: 18,
     hubTokenId: '0x726f757465725f61707000000000000000000000000000020000000000000002',
-    hubDenom: 'ibc/TODO_ETH_DENOM',
+    hubDenom: 'hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000002',
     addresses: {
       ethereum: '0x4E19c3E50a9549970f5b7fDAb76c9bE71C878641',
     },
@@ -134,16 +134,28 @@ export function getTokenAddress(
 
 /**
  * Get Hub token ID for a token
+ *
+ * @throws Error if the token's hub token ID is not configured
  */
 export function getHubTokenId(symbol: TokenSymbol): string {
-  return getToken(symbol).hubTokenId;
+  const tokenId = getToken(symbol).hubTokenId;
+  if (tokenId === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+    throw new Error(`Hub token ID for ${symbol} not configured`);
+  }
+  return tokenId;
 }
 
 /**
  * Get Hub denom for a token
+ *
+ * @throws Error if the token's hub denom is not configured
  */
 export function getHubDenom(symbol: TokenSymbol): string {
-  return getToken(symbol).hubDenom;
+  const denom = getToken(symbol).hubDenom;
+  if (denom.includes('TODO')) {
+    throw new Error(`Hub denom for ${symbol} not configured`);
+  }
+  return denom;
 }
 
 /**
