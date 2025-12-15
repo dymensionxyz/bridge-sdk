@@ -45,15 +45,57 @@ const tx = await client.populateHubToEvmTx({
 
 ## Supported Routes
 
+### Direct Routes (Hub as source or destination)
+
 | Source | Destination | Method |
 |--------|-------------|--------|
-| Dymension Hub | Ethereum, Base, BSC | `populateHubToEvmTx()` |
-| Dymension Hub | Solana | `populateHubToSolanaTx()` |
-| Dymension Hub | Kaspa | `populateHubToKaspaTx()` |
-| Ethereum, Base, BSC | Dymension Hub | `populateEvmToHubTx()` |
-| Solana | Dymension Hub | `populateSolanaToHubTx()` |
-| Kaspa | Dymension Hub | `createKaspaDepositPayload()` |
-| RollApp | Any (via forwarding) | `createRollAppToEvmMemo()` |
+| Hub | EVM (Ethereum, Base, BSC) | `populateHubToEvmTx()` or `transfer()` |
+| Hub | Solana | `populateHubToSolanaTx()` or `transfer()` |
+| Hub | Kaspa | `populateHubToKaspaTx()` or `transfer()` |
+| Hub | IBC (Osmosis, Cosmos Hub, etc.) | `transfer()` → MsgTransfer |
+| EVM (Ethereum, Base, BSC) | Hub | `populateEvmToHubTx()` or `transfer()` |
+| Solana | Hub | `populateSolanaToHubTx()` or `transfer()` |
+| Kaspa | Hub | `createKaspaDepositPayload()` |
+| IBC chains | Hub | `transfer()` → MsgTransfer |
+
+### Forwarding Routes (via Hub)
+
+Routes where assets traverse Hub with automatic forwarding to the final destination:
+
+| Source | Destination | Method |
+|--------|-------------|--------|
+| EVM | Any EVM chain | `transfer()` with forwarding metadata |
+| EVM | Solana | `transfer()` with forwarding metadata |
+| EVM | IBC chains | `transfer()` with IBC forwarding |
+| Solana | Any EVM chain | `transfer()` with forwarding metadata |
+| Solana | IBC chains | `transfer()` with IBC forwarding |
+| RollApp/IBC | Any Hyperlane chain | `createRollAppToEvmMemo()` + MsgTransfer |
+
+### High-Level Transfer API
+
+The `transfer()` method automatically routes based on source/destination:
+
+```typescript
+// EVM → Hub (direct)
+await client.transfer({ from: 'ethereum', to: 'dymension', token: 'KAS', ... });
+
+// Hub → EVM (direct)
+await client.transfer({ from: 'dymension', to: 'base', token: 'DYM', ... });
+
+// Hub → IBC (direct)
+await client.transfer({ from: 'dymension', to: 'osmosis', token: 'DYM', ... });
+
+// EVM → EVM (via Hub forwarding)
+await client.transfer({ from: 'ethereum', to: 'base', token: 'KAS', ... });
+
+// EVM → IBC (via Hub forwarding)
+await client.transfer({ from: 'ethereum', to: 'osmosis', token: 'DYM', ... });
+```
+
+### Supported Chains
+
+**Hyperlane chains**: Ethereum, Base, BSC, Solana, Kaspa
+**IBC chains**: Osmosis, Cosmos Hub, Celestia, Noble
 
 ## Configuration
 

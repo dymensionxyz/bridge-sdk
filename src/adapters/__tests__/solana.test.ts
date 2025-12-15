@@ -10,6 +10,9 @@ import {
 } from '../solana.js';
 import { PublicKey } from '@solana/web3.js';
 
+// Get RPC URL from environment for tests requiring live RPC
+const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL;
+
 describe('Solana Adapter', () => {
   describe('getSolanaWarpProgramId', () => {
     it('should return correct program ID for mainnet SOL', () => {
@@ -40,43 +43,47 @@ describe('Solana Adapter', () => {
   });
 
   describe('buildSolanaToHubTx', () => {
-    // Skip tests that require live RPC - see issue #33 for adding RPC secrets
-    it.skip('should build transaction with correct structure', async () => {
-      const params = {
-        tokenProgramId: 'So11111111111111111111111111111111111111112',
-        recipient: 'dym1g8sf7w4cz5gtupa6y62h3q6a4gjv37pgefnpt5',
-        amount: 1000000n,
-        sender: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-        network: 'mainnet' as const,
-        rpcUrl: 'https://api.mainnet-beta.solana.com',
-      };
+    // Run tests only if SOLANA_RPC_URL is provided (from CI secrets or local env)
+    const describeWithRpc = SOLANA_RPC_URL ? describe : describe.skip;
 
-      const tx = await buildSolanaToHubTx(params);
+    describeWithRpc('with RPC connection', () => {
+      it('should build transaction with correct structure', async () => {
+        const params = {
+          tokenProgramId: 'So11111111111111111111111111111111111111112',
+          recipient: 'dym1g8sf7w4cz5gtupa6y62h3q6a4gjv37pgefnpt5',
+          amount: 1000000n,
+          sender: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+          network: 'mainnet' as const,
+          rpcUrl: SOLANA_RPC_URL!,
+        };
 
-      expect(tx).toBeDefined();
-      expect(tx.instructions).toBeDefined();
-      expect(tx.instructions.length).toBeGreaterThan(0);
-      expect(tx.feePayer).toBeDefined();
-      expect(tx.recentBlockhash).toBeDefined();
-    });
+        const tx = await buildSolanaToHubTx(params);
 
-    it.skip('should include compute budget instructions', async () => {
-      const params = {
-        tokenProgramId: 'So11111111111111111111111111111111111111112',
-        recipient: 'dym1g8sf7w4cz5gtupa6y62h3q6a4gjv37pgefnpt5',
-        amount: 1000000n,
-        sender: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-        network: 'testnet' as const,
-        rpcUrl: 'https://api.testnet.solana.com',
-      };
+        expect(tx).toBeDefined();
+        expect(tx.instructions).toBeDefined();
+        expect(tx.instructions.length).toBeGreaterThan(0);
+        expect(tx.feePayer).toBeDefined();
+        expect(tx.recentBlockhash).toBeDefined();
+      });
 
-      const tx = await buildSolanaToHubTx(params);
+      it('should include compute budget instructions', async () => {
+        const params = {
+          tokenProgramId: 'So11111111111111111111111111111111111111112',
+          recipient: 'dym1g8sf7w4cz5gtupa6y62h3q6a4gjv37pgefnpt5',
+          amount: 1000000n,
+          sender: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+          network: 'mainnet' as const,
+          rpcUrl: SOLANA_RPC_URL!,
+        };
 
-      const computeBudgetInstructions = tx.instructions.filter(
-        (ix) => ix.programId.toBase58() === 'ComputeBudget111111111111111111111111111111'
-      );
+        const tx = await buildSolanaToHubTx(params);
 
-      expect(computeBudgetInstructions.length).toBeGreaterThanOrEqual(2);
+        const computeBudgetInstructions = tx.instructions.filter(
+          (ix) => ix.programId.toBase58() === 'ComputeBudget111111111111111111111111111111'
+        );
+
+        expect(computeBudgetInstructions.length).toBeGreaterThanOrEqual(2);
+      });
     });
   });
 });
