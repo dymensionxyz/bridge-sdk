@@ -7,6 +7,13 @@
 
 import { KASPA, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
 import { cosmosAddressToHyperlane, hexToBytes } from '../utils/index.js';
+import {
+  encodeHLMetadata,
+  encodeHookForwardToHL,
+  encodeHookForwardToIBC,
+  type MsgRemoteTransferFields,
+  type MsgTransferFields,
+} from '../forward/index.js';
 
 /**
  * Parameters for Kaspa deposit payload
@@ -18,6 +25,10 @@ export interface KaspaDepositParams {
   amount: bigint;
   /** Network selection */
   network?: 'mainnet' | 'testnet';
+  /** Optional: Forward to Hyperlane destination after arriving on Hub */
+  forwardToHyperlane?: MsgRemoteTransferFields;
+  /** Optional: Forward to IBC destination after arriving on Hub */
+  forwardToIbc?: MsgTransferFields;
 }
 
 /**
@@ -27,11 +38,14 @@ export interface KaspaDepositParams {
  * - Message header (version, nonce, origin, sender, destination, recipient)
  * - TokenMessage body (recipient, amount, metadata)
  *
+ * When forwarding parameters are provided, the metadata will contain
+ * the forwarding hook data for automatic routing after Hub arrival.
+ *
  * @param params - Deposit parameters
  * @returns Serialized Hyperlane message bytes
  */
 export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8Array {
-  const { hubRecipient, amount, network = 'mainnet' } = params;
+  const { hubRecipient, amount, network = 'mainnet', forwardToHyperlane, forwardToIbc } = params;
 
   if (amount < KASPA.MIN_DEPOSIT_SOMPI) {
     throw new Error(
@@ -39,11 +53,15 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
     );
   }
 
+  if (forwardToHyperlane && forwardToIbc) {
+    throw new Error('Cannot specify both forwardToHyperlane and forwardToIbc');
+  }
+
   const hubDomain = network === 'mainnet' ? DOMAINS.DYMENSION_MAINNET : DOMAINS.DYMENSION_TESTNET;
   const kaspaDomain = network === 'mainnet' ? DOMAINS.KASPA_MAINNET : DOMAINS.KASPA_TESTNET;
 
   const recipientH256 = cosmosAddressToHyperlane(hubRecipient);
-  const metadata = serializeEmptyHlMetadata();
+  const metadata = serializeHlMetadata(forwardToHyperlane, forwardToIbc);
   const tokenMessageBody = serializeTokenMessage(recipientH256, amount, metadata);
 
   return serializeHyperlaneMessage({
@@ -133,17 +151,25 @@ function serializeHyperlaneMessage(message: {
 }
 
 /**
- * Serialize an empty HlMetadata protobuf message
+ * Serialize HlMetadata with optional forwarding hooks
  *
- * HlMetadata has three fields (all repeated bytes):
- * - kaspa (field 1)
- * - hook_forward_to_hl (field 2)
- * - hook_forward_to_ibc (field 3)
- *
- * Empty message = 0 bytes (all fields are optional/repeated and empty)
+ * HlMetadata fields:
+ * - hook_forward_to_ibc (field 1): IBC forwarding data
+ * - kaspa (field 2): Kaspa-specific data
+ * - hook_forward_to_hl (field 3): Hyperlane forwarding data
  */
-function serializeEmptyHlMetadata(): Uint8Array {
-  return new Uint8Array(0);
+function serializeHlMetadata(
+  forwardToHyperlane?: MsgRemoteTransferFields,
+  forwardToIbc?: MsgTransferFields
+): Uint8Array {
+  if (!forwardToHyperlane && !forwardToIbc) {
+    return new Uint8Array(0);
+  }
+
+  return encodeHLMetadata({
+    hookForwardToHl: forwardToHyperlane ? encodeHookForwardToHL(forwardToHyperlane) : undefined,
+    hookForwardToIbc: forwardToIbc ? encodeHookForwardToIBC(forwardToIbc) : undefined,
+  });
 }
 
 /**
