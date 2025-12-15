@@ -135,6 +135,78 @@ describe('Kaspa Adapter', () => {
       const hasNonZero = lastBytes.some((b) => b !== 0);
       expect(hasNonZero).toBe(true);
     });
+
+    it('should include HLMetadata when forwardToHyperlane is specified', () => {
+      const params: KaspaDepositParams = {
+        hubRecipient: 'dym139mq752delxv78jvtmwxhasyrycufsvrw4aka9',
+        amount: 10_000_000_000n,
+        network: 'testnet',
+        forwardToHyperlane: {
+          tokenId: '0x' + '1'.repeat(64),
+          destinationDomain: 1399811149, // Solana
+          recipient: '0x' + '2'.repeat(64),
+          amount: '10000000000',
+          maxFee: { denom: 'adym', amount: '100000000000000000' },
+        },
+      };
+
+      const payload = serializeKaspaDepositPayload(params);
+      const body = payload.slice(77);
+
+      // Body should be > 64 bytes (32 recipient + 32 amount + metadata)
+      expect(body.length).toBeGreaterThan(64);
+    });
+
+    it('should include HLMetadata when forwardToIbc is specified', () => {
+      const params: KaspaDepositParams = {
+        hubRecipient: 'dym139mq752delxv78jvtmwxhasyrycufsvrw4aka9',
+        amount: 10_000_000_000n,
+        network: 'testnet',
+        forwardToIbc: {
+          sourcePort: 'transfer',
+          sourceChannel: 'channel-0',
+          token: { denom: 'adym', amount: '10000000000' },
+          sender: 'dym139mq752delxv78jvtmwxhasyrycufsvrw4aka9',
+          receiver: 'osmo1abc123',
+          timeoutHeight: { revisionNumber: 0n, revisionHeight: 1000n },
+          timeoutTimestamp: BigInt(Date.now() + 600000) * 1_000_000n,
+        },
+      };
+
+      const payload = serializeKaspaDepositPayload(params);
+      const body = payload.slice(77);
+
+      // Body should be > 64 bytes (32 recipient + 32 amount + metadata)
+      expect(body.length).toBeGreaterThan(64);
+    });
+
+    it('should throw if both forwardToHyperlane and forwardToIbc are specified', () => {
+      const params: KaspaDepositParams = {
+        hubRecipient: 'dym139mq752delxv78jvtmwxhasyrycufsvrw4aka9',
+        amount: 10_000_000_000n,
+        network: 'testnet',
+        forwardToHyperlane: {
+          tokenId: '0x' + '1'.repeat(64),
+          destinationDomain: 1399811149,
+          recipient: '0x' + '2'.repeat(64),
+          amount: '10000000000',
+          maxFee: { denom: 'adym', amount: '100000000000000000' },
+        },
+        forwardToIbc: {
+          sourcePort: 'transfer',
+          sourceChannel: 'channel-0',
+          token: { denom: 'adym', amount: '10000000000' },
+          sender: 'dym139mq752delxv78jvtmwxhasyrycufsvrw4aka9',
+          receiver: 'osmo1abc123',
+          timeoutHeight: { revisionNumber: 0n, revisionHeight: 1000n },
+          timeoutTimestamp: BigInt(Date.now() + 600000) * 1_000_000n,
+        },
+      };
+
+      expect(() => serializeKaspaDepositPayload(params)).toThrow(
+        /Cannot specify both forwardToHyperlane and forwardToIbc/
+      );
+    });
   });
 
   describe('getKaspaEscrowAddress', () => {
