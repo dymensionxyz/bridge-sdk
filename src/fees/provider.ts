@@ -8,8 +8,8 @@ import { getIgpHookForToken, type TokenSymbol } from '../config/tokens.js';
  * Default Hub REST endpoints
  */
 export const HUB_REST_ENDPOINTS = {
-  mainnet: 'https://dymension-mainnet-rest.public.blastapi.io',
-  testnet: 'https://dymension-testnet-rest.public.blastapi.io',
+  mainnet: 'https://dymension-rest.publicnode.com',
+  testnet: 'https://dymension-testnet-rest.publicnode.com',
 } as const;
 
 /**

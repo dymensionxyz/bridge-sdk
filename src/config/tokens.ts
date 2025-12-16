@@ -53,9 +53,11 @@ export const TOKENS = {
       base: '0x9c3dfFBE238B3A472233151a49A99431966De087',
       bsc: '0x8AC2505B0Fe4F73c7A0FCc5c63DB2bCBb1221357',
       kaspa: 'native',
+      dymension: 'hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000000',
     },
     testnetAddresses: {
       kaspa: 'native',
+      dymension: 'hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000000',
     },
   },
   ETH: {
@@ -66,6 +68,7 @@ export const TOKENS = {
     hubDenom: 'hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000002',
     addresses: {
       ethereum: '0x4E19c3E50a9549970f5b7fDAb76c9bE71C878641',
+      dymension: 'hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000002',
     },
   },
   DYM: {
