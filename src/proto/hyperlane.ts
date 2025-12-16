@@ -16,6 +16,8 @@
  */
 
 import protobuf from 'protobufjs';
+import { Registry } from '@cosmjs/proto-signing';
+import { defaultRegistryTypes } from '@cosmjs/stargate';
 
 /**
  * Type URL for MsgRemoteTransfer
@@ -144,11 +146,9 @@ export const MsgRemoteTransferEncoder = {
  * const client = await SigningStargateClient.connectWithSigner(rpc, signer, { registry });
  * ```
  */
-export function createHyperlaneRegistry() {
-  // Dynamic import to avoid bundling @cosmjs/proto-signing for users who don't need it
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Registry, defaultRegistryTypes } = require('@cosmjs/proto-signing');
+export function createHyperlaneRegistry(): Registry {
   const registry = new Registry(defaultRegistryTypes);
-  registry.register(MSG_REMOTE_TRANSFER_TYPE_URL, MsgRemoteTransferEncoder);
+  // Cast needed because protobufjs types don't exactly match CosmJS GeneratedType
+  registry.register(MSG_REMOTE_TRANSFER_TYPE_URL, MsgRemoteTransferEncoder as never);
   return registry;
 }
