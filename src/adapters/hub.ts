@@ -81,8 +81,8 @@ export function populateHubToEvmTx(params: HubToEvmParams): MsgRemoteTransfer {
   const customHookId = getIgpHookForToken(token);
   const igpDenom = getHubDenom(token);
 
-  // Convert EVM address to 32-byte hex (without 0x prefix for the message)
-  const recipientHex = evmAddressToHyperlane(recipient).slice(2);
+  // Convert EVM address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
+  const recipientHex = evmAddressToHyperlane(recipient);
 
   return {
     typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
@@ -149,8 +149,8 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
     ? DOMAINS.KASPA_MAINNET
     : DOMAINS.KASPA_TESTNET;
 
-  // Convert Kaspa address to 32-byte hex (without 0x prefix for the message)
-  const recipientHex = kaspaAddressToHyperlane(kaspaRecipient).slice(2);
+  // Convert Kaspa address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
+  const recipientHex = kaspaAddressToHyperlane(kaspaRecipient);
 
   // Hub to Kaspa is an exempt route - no IGP required
   return {
@@ -210,8 +210,8 @@ export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTrans
     ? DOMAINS.SOLANA_MAINNET
     : DOMAINS.SOLANA_TESTNET;
 
-  // Convert Solana address to 32-byte hex (without 0x prefix for the message)
-  const recipientHex = solanaAddressToHyperlane(recipient).slice(2);
+  // Convert Solana address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
+  const recipientHex = solanaAddressToHyperlane(recipient);
 
   // Hub to Solana is an exempt route - no IGP required
   return {

@@ -33,12 +33,11 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.destinationDomain).toBe(DOMAINS.ETHEREUM);
     });
 
-    it('should convert EVM recipient to bytes32 hex without 0x prefix', () => {
+    it('should convert EVM recipient to bytes32 hex with 0x prefix', () => {
       const msg = populateHubToEvmTx(params);
 
-      expect(msg.value.recipient).toMatch(/^[0-9a-f]{64}$/);
+      expect(msg.value.recipient).toMatch(/^0x[0-9a-f]{64}$/);
       expect(msg.value.recipient).toContain('742d35cc6634c0532925a3b844bc9e7595f0beb1');
-      expect(msg.value.recipient).not.toContain('0x');
     });
 
     it('should use token-specific IGP hook', () => {
@@ -121,11 +120,10 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.destinationDomain).toBe(DOMAINS.KASPA_TESTNET);
     });
 
-    it('should convert Kaspa recipient to bytes32 hex without 0x prefix', () => {
+    it('should convert Kaspa recipient to bytes32 hex with 0x prefix', () => {
       const msg = populateHubToKaspaTx(params);
 
-      expect(msg.value.recipient).toMatch(/^[0-9a-f]{64}$/);
-      expect(msg.value.recipient).not.toContain('0x');
+      expect(msg.value.recipient).toMatch(/^0x[0-9a-f]{64}$/);
     });
 
     it('should have no IGP fee (exempt route)', () => {
@@ -167,11 +165,10 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.destinationDomain).toBe(DOMAINS.SOLANA_TESTNET);
     });
 
-    it('should convert Solana recipient to bytes32 hex without 0x prefix', () => {
+    it('should convert Solana recipient to bytes32 hex with 0x prefix', () => {
       const msg = populateHubToSolanaTx(params);
 
-      expect(msg.value.recipient).toMatch(/^[0-9a-f]{64}$/);
-      expect(msg.value.recipient).not.toContain('0x');
+      expect(msg.value.recipient).toMatch(/^0x[0-9a-f]{64}$/);
     });
 
     it('should have no IGP fee (exempt route)', () => {

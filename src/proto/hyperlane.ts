@@ -30,9 +30,12 @@ export const MSG_REMOTE_TRANSFER_TYPE_URL = '/hyperlane.warp.v1.MsgRemoteTransfe
  * - Recipients (padded to 32 bytes)
  * - Hook IDs (IGP and custom hooks)
  *
- * In the proto definition, these are encoded as bytes (not strings).
+ * IMPORTANT: In the proto definition, HexAddress is encoded as a STRING
+ * containing "0x" + 64 hex characters (66 chars total), NOT as raw bytes.
+ * This matches the Go implementation where ENCODED_HEX_ADDRESS_LENGTH = 66.
  */
 export const HEX_ADDRESS_LENGTH = 32;
+export const ENCODED_HEX_ADDRESS_LENGTH = 66;
 
 // Build protobuf types at runtime
 const root = new protobuf.Root();
@@ -46,46 +49,49 @@ const Coin = new protobuf.Type('Coin')
  *
  * From hyperlane-cosmos/proto/hyperlane/warp/v1/tx.proto:
  * - sender: cosmos address string
- * - token_id: HexAddress (32 bytes) - the warp token ID
+ * - token_id: HexAddress (string with 0x prefix, 66 chars)
  * - destination_domain: uint32 - Hyperlane domain ID of target chain
- * - recipient: HexAddress (32 bytes) - recipient address padded to 32 bytes
+ * - recipient: HexAddress (string with 0x prefix, 66 chars)
  * - amount: string (cosmos.Int)
- * - custom_hook_id: HexAddress (32 bytes, nullable) - post-dispatch hook
+ * - custom_hook_id: HexAddress (string with 0x prefix, 66 chars, nullable)
  * - gas_limit: string (cosmos.Int)
  * - max_fee: Coin - maximum fee for IGP payment
- * - custom_hook_metadata: bytes
+ * - custom_hook_metadata: string
+ *
+ * NOTE: HexAddress fields are STRING type in proto, not bytes!
+ * The Go code uses gogoproto.customtype to handle the HexAddress custom type.
  */
 const MsgRemoteTransferProto = new protobuf.Type('MsgRemoteTransfer')
   .add(new protobuf.Field('sender', 1, 'string'))
-  .add(new protobuf.Field('tokenId', 2, 'bytes'))
+  .add(new protobuf.Field('tokenId', 2, 'string'))
   .add(new protobuf.Field('destinationDomain', 3, 'uint32'))
-  .add(new protobuf.Field('recipient', 4, 'bytes'))
+  .add(new protobuf.Field('recipient', 4, 'string'))
   .add(new protobuf.Field('amount', 5, 'string'))
-  .add(new protobuf.Field('customHookId', 6, 'bytes'))
+  .add(new protobuf.Field('customHookId', 6, 'string'))
   .add(new protobuf.Field('gasLimit', 7, 'string'))
   .add(new protobuf.Field('maxFee', 8, 'Coin'))
-  .add(new protobuf.Field('customHookMetadata', 9, 'bytes'));
+  .add(new protobuf.Field('customHookMetadata', 9, 'string'));
 
 root.add(Coin);
 root.add(MsgRemoteTransferProto);
 
 /**
- * Convert hex string to bytes
+ * Ensure a hex address has 0x prefix and is 66 chars (32 bytes encoded)
  */
-function hexToBytes(hex: string): Uint8Array {
-  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(cleanHex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(cleanHex.substr(i * 2, 2), 16);
+function normalizeHexAddress(hex: string): string {
+  if (!hex) return '';
+  const withPrefix = hex.startsWith('0x') ? hex : '0x' + hex;
+  if (withPrefix.length !== 66) {
+    throw new Error(`Invalid HexAddress length: expected 66 chars, got ${withPrefix.length}`);
   }
-  return bytes;
+  return withPrefix;
 }
 
 /**
  * MsgRemoteTransfer fields interface
  *
- * The SDK uses camelCase (tokenId) but the proto uses snake_case (token_id).
- * CosmJS handles this conversion automatically.
+ * HexAddress fields (tokenId, recipient, customHookId) should be 66-char
+ * hex strings with 0x prefix.
  */
 export interface MsgRemoteTransferValue {
   sender: string;
@@ -102,9 +108,8 @@ export interface MsgRemoteTransferValue {
 /**
  * CosmJS GeneratedType for MsgRemoteTransfer
  *
- * This handles the conversion of hex string fields to bytes during encoding.
- * HexAddress fields (tokenId, recipient, customHookId) must be encoded as
- * bytes in the protobuf, not strings.
+ * HexAddress fields are encoded as strings with 0x prefix (66 chars).
+ * This matches the Go implementation.
  *
  * Register with CosmJS:
  * ```typescript
@@ -115,16 +120,10 @@ export const MsgRemoteTransferEncoder = {
   encode: (message: MsgRemoteTransferValue) => {
     const converted = {
       ...message,
-      tokenId: typeof message.tokenId === 'string' ? hexToBytes(message.tokenId) : message.tokenId,
-      recipient: typeof message.recipient === 'string' ? hexToBytes(message.recipient) : message.recipient,
-      customHookId:
-        typeof message.customHookId === 'string' && message.customHookId
-          ? hexToBytes(message.customHookId)
-          : new Uint8Array(0),
-      customHookMetadata:
-        typeof message.customHookMetadata === 'string'
-          ? new TextEncoder().encode(message.customHookMetadata)
-          : message.customHookMetadata || new Uint8Array(0),
+      tokenId: normalizeHexAddress(message.tokenId),
+      recipient: normalizeHexAddress(message.recipient),
+      customHookId: message.customHookId ? normalizeHexAddress(message.customHookId) : '',
+      customHookMetadata: message.customHookMetadata || '',
     };
     return MsgRemoteTransferProto.encode(MsgRemoteTransferProto.create(converted));
   },
