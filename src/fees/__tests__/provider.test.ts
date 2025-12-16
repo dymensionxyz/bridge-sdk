@@ -342,8 +342,8 @@ describe('FeeProvider', () => {
     it('should have mainnet and testnet endpoints', () => {
       expect(HUB_REST_ENDPOINTS.mainnet).toBeDefined();
       expect(HUB_REST_ENDPOINTS.testnet).toBeDefined();
-      expect(HUB_REST_ENDPOINTS.mainnet).toContain('mainnet');
-      expect(HUB_REST_ENDPOINTS.testnet).toContain('testnet');
+      expect(HUB_REST_ENDPOINTS.mainnet).toMatch(/^https:\/\//);
+      expect(HUB_REST_ENDPOINTS.testnet).toMatch(/^https:\/\//);
     });
   });
 });

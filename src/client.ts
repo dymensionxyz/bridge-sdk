@@ -461,26 +461,47 @@ export class BridgeClient {
     const toConfig = getChainConfig(to);
 
     if (toConfig.type === 'hyperlane' || toConfig.type === 'hub') {
+      // Route to appropriate adapter based on destination chain
+      if (to === 'kaspa') {
+        const tx = await this.populateHubToKaspaTx({
+          kaspaRecipient: recipient,
+          amount,
+          sender,
+        });
+        return {
+          type: 'cosmos',
+          tx,
+          route: { from: 'dymension', to, via: 'direct' },
+        };
+      }
+
+      if (to === 'solana') {
+        const tx = await this.populateHubToSolanaTx({
+          tokenId,
+          recipient,
+          amount,
+          sender,
+        });
+        return {
+          type: 'cosmos',
+          tx,
+          route: { from: 'dymension', to, via: 'direct' },
+        };
+      }
+
+      // EVM destinations (ethereum, base, bsc)
       const domain = getHyperlaneDomain(to, network);
-
-      // Convert recipient to Hyperlane bytes32 format
-      const recipientBytes32 = addressToHyperlane(recipient, to);
-
-      // Fetch IGP fee from chain (only for EVM destinations, not Kaspa/Solana)
-      const isExemptRoute = to === 'kaspa' || to === 'solana';
-      const igpFee = isExemptRoute
-        ? 0n
-        : await this.feeProvider.quoteIgpPayment({
-            destinationDomain: domain,
-            gasLimit: 200_000,
-            token,
-          });
+      const igpFee = await this.feeProvider.quoteIgpPayment({
+        destinationDomain: domain,
+        gasLimit: 200_000,
+        token,
+      });
 
       const tx = await this.populateHubToEvmTx({
         tokenId,
         token,
         destination: domain,
-        recipient: recipientBytes32,
+        recipient,
         amount,
         sender,
         igpFee,

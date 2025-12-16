@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.0] - 2024-12-16
+
+### Fixed
+
+- Add missing `dymension` address entry for KAS and ETH tokens in registry
+- Correct IGP hook IDs (prefix was `router_app` instead of `router_post_dispatch`)
+- Update default REST endpoint from deprecated Blast API to publicnode
+- Fix `transferFromHub` to route to correct adapter per destination chain type
+
 ## [0.1.0] - 2024-12-10
 
 ### Added
