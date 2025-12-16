@@ -116,6 +116,15 @@ export {
   kaspaAddressToHyperlane,
 } from './utils/address.js';
 
+// Hyperlane protobuf types for CosmJS
+export {
+  MSG_REMOTE_TRANSFER_TYPE_URL,
+  HEX_ADDRESS_LENGTH,
+  MsgRemoteTransferEncoder,
+  createHyperlaneRegistry,
+} from './proto/index.js';
+export type { MsgRemoteTransferValue } from './proto/index.js';
+
 // Adapters
 export {
   // Hub adapter (standalone functions for native warp module)
