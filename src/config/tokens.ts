@@ -6,6 +6,7 @@
  */
 
 import type { Network } from './chains.js';
+import { HUB_IGP_HOOKS, type IgpTokenSymbol } from './constants.js';
 
 /** Supported chain names for token addresses */
 export type TokenChainName =
@@ -197,4 +198,32 @@ export function getTokensOnChain(chain: TokenChainName, network: Network = 'main
  */
 export function getAllTokenSymbols(): TokenSymbol[] {
   return Object.keys(TOKENS) as TokenSymbol[];
+}
+
+/**
+ * Get the IGP hook ID for a token
+ *
+ * When transferring from Hub to EVM chains, users must pay the IGP
+ * that accepts the token they're transferring. Each supported token
+ * has a dedicated IGP hook on Hub.
+ *
+ * @param symbol - Token symbol (DYM, KAS, ETH)
+ * @returns 32-byte hex IGP hook ID
+ * @throws Error if no IGP is configured for the token
+ */
+export function getIgpHookForToken(symbol: TokenSymbol): string {
+  if (!(symbol in HUB_IGP_HOOKS)) {
+    throw new Error(
+      `No IGP hook configured for token: ${symbol}. ` +
+        `Supported tokens for IGP payment: ${Object.keys(HUB_IGP_HOOKS).join(', ')}`
+    );
+  }
+  return HUB_IGP_HOOKS[symbol as IgpTokenSymbol];
+}
+
+/**
+ * Check if a token has an IGP hook configured
+ */
+export function hasIgpHook(symbol: TokenSymbol): boolean {
+  return symbol in HUB_IGP_HOOKS;
 }

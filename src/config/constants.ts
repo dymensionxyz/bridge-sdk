@@ -88,3 +88,21 @@ export const SOLANA = {
  */
 export const HUB_MAILBOX = '0x68797065726c616e650000000000000000000000000000000000000000000000';
 
+/**
+ * Hub IGP (Interchain Gas Paymaster) hook IDs
+ *
+ * Each IGP accepts a specific token denomination for gas payment.
+ * When transferring FROM Hub to EVM chains, users must pay the IGP
+ * that accepts the token they're transferring.
+ */
+export const HUB_IGP_HOOKS = {
+  /** IGP accepting DYM (adym) - 18 decimals */
+  DYM: '0x726f757465725f61707000000000000000000000000000000000000000000001',
+  /** IGP accepting KAS - 8 decimals */
+  KAS: '0x726f757465725f61707000000000000000000000000000000000000000000005',
+  /** IGP accepting ETH - 18 decimals */
+  ETH: '0x726f757465725f61707000000000000000000000000000000000000000000006',
+} as const;
+
+export type IgpTokenSymbol = keyof typeof HUB_IGP_HOOKS;
+

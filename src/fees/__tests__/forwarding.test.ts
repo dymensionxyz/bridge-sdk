@@ -5,6 +5,7 @@ import {
   validateForwardingParams,
   type ForwardingParams,
 } from '../forwarding.js';
+import { HUB_IGP_HOOKS } from '../../config/constants.js';
 
 describe('Forwarding Fee Calculations', () => {
   describe('calculateForwardingFees', () => {
@@ -12,6 +13,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n, // 100 tokens
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop1InboundBridgingFeeRate: 0,
         hop2IgpFee: 5n * 10n ** 17n, // 0.5 tokens IGP
         hop2OutboundBridgingFeeRate: 0.001, // 0.1%
@@ -34,12 +36,17 @@ describe('Forwarding Fee Calculations', () => {
 
       // recipientReceives = forwardAmount - outboundFee
       expect(result.recipientReceives).toBe(result.forwardAmount - expectedOutboundFee);
+
+      // Verify customHookId and maxFeeDenom
+      expect(result.hop2Fees.customHookId).toBe(HUB_IGP_HOOKS.DYM);
+      expect(result.hop2Fees.maxFeeDenom).toBe('adym');
     });
 
     it('calculates HL -> Hub -> HL with inbound bridging fee', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n,
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop1InboundBridgingFeeRate: 0.001, // 0.1%
         hop2IgpFee: 5n * 10n ** 17n,
         hop2OutboundBridgingFeeRate: 0.001,
@@ -61,6 +68,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n,
         routeType: 'rollapp-hub-hl',
+        token: 'DYM',
         eibcFeePercent: 0.5, // 0.5% EIBC
         delayedAckBridgingFeeRate: 0.0015, // 0.15% delayedack
         hop2IgpFee: 5n * 10n ** 17n,
@@ -84,6 +92,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 1n * 10n ** 18n, // 1 token
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop2IgpFee: 2n * 10n ** 18n, // 2 tokens IGP (more than amount!)
         hop2OutboundBridgingFeeRate: 0.001,
       };
@@ -95,6 +104,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n,
         routeType: 'rollapp-hub-hl',
+        token: 'DYM',
         eibcFeePercent: 0.5,
         delayedAckBridgingFeeRate: 0.0015,
         hop2IgpFee: 5n * 10n ** 17n,
@@ -109,10 +119,11 @@ describe('Forwarding Fee Calculations', () => {
       expect(reconstructedRecipient).toBe(result.recipientReceives);
     });
 
-    it('handles zero fees correctly', () => {
+    it('handles zero fees correctly for IBC destination (exempt route)', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n,
-        routeType: 'ibc-hub-hl', // IBC has no inbound fee
+        routeType: 'hl-hub-ibc', // IBC has no IGP and no inbound fee
+        token: 'DYM',
         hop2IgpFee: 0n,
         hop2OutboundBridgingFeeRate: 0,
       };
@@ -123,6 +134,8 @@ describe('Forwarding Fee Calculations', () => {
       expect(result.forwardAmount).toBe(100n * 10n ** 18n);
       expect(result.maxFee).toBe(0n);
       expect(result.recipientReceives).toBe(100n * 10n ** 18n);
+      // IBC route is exempt - no customHookId
+      expect(result.hop2Fees.customHookId).toBe('');
     });
 
     it('handles realistic mainnet scenario', () => {
@@ -131,6 +144,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount,
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop1InboundBridgingFeeRate: 0.001, // 0.1%
         hop2IgpFee: 500000n, // ~0.5 USDC worth of IGP
         hop2OutboundBridgingFeeRate: 0.001, // 0.1%
@@ -148,6 +162,21 @@ describe('Forwarding Fee Calculations', () => {
       expect(result.recipientReceives).toBeGreaterThan(997n * 10n ** 6n);
       expect(result.recipientReceives).toBeLessThan(998n * 10n ** 6n);
     });
+
+    it('uses KAS-specific IGP hook and denom for KAS transfers', () => {
+      const params: ForwardingParams = {
+        amount: 100n * 10n ** 8n, // 100 KAS (8 decimals)
+        routeType: 'hl-hub-hl',
+        token: 'KAS',
+        hop2IgpFee: 5n * 10n ** 6n,
+        hop2OutboundBridgingFeeRate: 0.001,
+      };
+
+      const result = calculateForwardingFees(params);
+
+      expect(result.hop2Fees.customHookId).toBe(HUB_IGP_HOOKS.KAS);
+      expect(result.hop2Fees.maxFeeDenom).toBe('hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000000');
+    });
   });
 
   describe('calculateForwardingSendAmount', () => {
@@ -155,6 +184,7 @@ describe('Forwarding Fee Calculations', () => {
       const desiredRecipient = 99n * 10n ** 18n;
       const params: Omit<ForwardingParams, 'amount'> = {
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop1InboundBridgingFeeRate: 0.001,
         hop2IgpFee: 5n * 10n ** 17n,
         hop2OutboundBridgingFeeRate: 0.001,
@@ -171,6 +201,7 @@ describe('Forwarding Fee Calculations', () => {
       const desiredRecipient = 100n * 10n ** 18n;
       const params: Omit<ForwardingParams, 'amount'> = {
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop2IgpFee: 5n * 10n ** 17n,
         hop2OutboundBridgingFeeRate: 0.001,
       };
@@ -186,6 +217,7 @@ describe('Forwarding Fee Calculations', () => {
       const desiredRecipient = 95n * 10n ** 18n;
       const params: Omit<ForwardingParams, 'amount'> = {
         routeType: 'rollapp-hub-hl',
+        token: 'DYM',
         eibcFeePercent: 0.5,
         delayedAckBridgingFeeRate: 0.0015,
         hop2IgpFee: 5n * 10n ** 17n,
@@ -204,6 +236,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n,
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop2IgpFee: 5n * 10n ** 17n,
         hop2OutboundBridgingFeeRate: 0.001,
       };
@@ -215,6 +248,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 0n,
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop2IgpFee: 5n * 10n ** 17n,
         hop2OutboundBridgingFeeRate: 0.001,
       };
@@ -226,6 +260,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n,
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop2IgpFee: 5n * 10n ** 17n,
         hop2OutboundBridgingFeeRate: 1.5, // > 100%
       };
@@ -237,6 +272,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 1n * 10n ** 18n, // 1 token
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop2IgpFee: 2n * 10n ** 18n, // 2 tokens (exceeds amount)
         hop2OutboundBridgingFeeRate: 0.001,
       };
@@ -250,6 +286,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 100n, // Very small
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop1InboundBridgingFeeRate: 0.001,
         hop2IgpFee: 10n,
         hop2OutboundBridgingFeeRate: 0.001,
@@ -264,6 +301,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: largeAmount,
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop2IgpFee: 1000n,
         hop2OutboundBridgingFeeRate: 0.001,
       };
@@ -277,6 +315,7 @@ describe('Forwarding Fee Calculations', () => {
       const params: ForwardingParams = {
         amount: 100n * 10n ** 18n,
         routeType: 'hl-hub-hl',
+        token: 'DYM',
         hop1InboundBridgingFeeRate: 0.02, // 2% inbound
         hop2IgpFee: 5n * 10n ** 18n, // Large IGP
         hop2OutboundBridgingFeeRate: 0.02, // 2% outbound

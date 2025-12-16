@@ -12,6 +12,7 @@
  */
 
 import { calculateBridgingFee, multiplyByRate } from './bridging.js';
+import { getHubDenom, getIgpHookForToken, hasIgpHook, type TokenSymbol } from '../config/tokens.js';
 
 /**
  * Route types for forwarding transfers
@@ -41,10 +42,14 @@ export interface Hop1Fees {
  * Fee breakdown for hop 2 (Hub -> destination)
  */
 export interface Hop2Fees {
-  /** IGP fee for destination chain (passed as maxFee, in Hub denom) */
+  /** IGP fee for destination chain (passed as maxFee, in token's Hub denom) */
   igpFee: bigint;
   /** Outbound bridging fee (deducted from forward amount during dispatch) */
   outboundBridgingFee: bigint;
+  /** IGP hook ID for the token being transferred (32-byte hex) */
+  customHookId: string;
+  /** Denom for maxFee payment (token's Hub denom) */
+  maxFeeDenom: string;
 }
 
 /**
@@ -86,6 +91,9 @@ export interface ForwardingParams {
   /** Route type */
   routeType: ForwardingRouteType;
 
+  /** Token being transferred (determines IGP hook and maxFee denom) */
+  token: TokenSymbol;
+
   /** Hop 1: Inbound bridging fee rate (decimal, e.g., 0.001 for 0.1%) */
   hop1InboundBridgingFeeRate?: number;
 
@@ -98,7 +106,7 @@ export interface ForwardingParams {
   /** Hop 1: Delayedack bridging fee rate (decimal) - only for rollapp routes */
   delayedAckBridgingFeeRate?: number;
 
-  /** Hop 2: IGP fee for Hub -> destination (in adym) */
+  /** Hop 2: IGP fee for Hub -> destination (in the token's Hub denom) */
   hop2IgpFee: bigint;
 
   /** Hop 2: Outbound bridging fee rate (decimal, e.g., 0.001 for 0.1%) */
@@ -119,6 +127,7 @@ export interface ForwardingParams {
  * const hop2IgpFee = await provider.quoteIgpPayment({
  *   destinationDomain: DOMAINS.ETHEREUM,
  *   gasLimit: 150000,
+ *   token: 'DYM',
  * });
  * const hop2BridgingRate = await provider.getBridgingFeeRate(tokenId, 'outbound');
  *
@@ -126,17 +135,19 @@ export interface ForwardingParams {
  * const calc = calculateForwardingFees({
  *   amount: 100n * 10n ** 18n, // 100 tokens
  *   routeType: 'hl-hub-hl',
+ *   token: 'DYM',
  *   hop2IgpFee,
  *   hop2OutboundBridgingFeeRate: hop2BridgingRate,
  * });
  *
- * // Use calc.forwardAmount and calc.maxFee in forwarding metadata
+ * // Use calc.forwardAmount, calc.maxFee, and calc.hop2Fees.customHookId in forwarding metadata
  * ```
  */
 export function calculateForwardingFees(params: ForwardingParams): ForwardingCalculation {
   const {
     amount,
     routeType,
+    token,
     hop1InboundBridgingFeeRate = 0,
     hop1IgpFee = 0n,
     eibcFeePercent = 0,
@@ -144,6 +155,12 @@ export function calculateForwardingFees(params: ForwardingParams): ForwardingCal
     hop2IgpFee,
     hop2OutboundBridgingFeeRate,
   } = params;
+
+  // Get IGP hook and denom for the token
+  // For exempt routes (hl-hub-ibc, rollapp-hub-ibc), no IGP is needed
+  const isExemptRoute = routeType.endsWith('-ibc');
+  const customHookId = isExemptRoute || !hasIgpHook(token) ? '' : getIgpHookForToken(token);
+  const maxFeeDenom = isExemptRoute ? 'adym' : getHubDenom(token);
 
   // Calculate hop 1 fees
   const hop1Fees: Hop1Fees = {
@@ -202,6 +219,8 @@ export function calculateForwardingFees(params: ForwardingParams): ForwardingCal
   const hop2Fees: Hop2Fees = {
     igpFee: maxFee,
     outboundBridgingFee,
+    customHookId,
+    maxFeeDenom,
   };
 
   // Calculate total fees deducted from the transfer amount

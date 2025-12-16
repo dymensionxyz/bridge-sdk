@@ -2,6 +2,8 @@
  * Dynamic fee provider for fetching on-chain fee values via REST/LCD
  */
 
+import { getIgpHookForToken, type TokenSymbol } from '../config/tokens.js';
+
 /**
  * Default Hub REST endpoints
  */
@@ -195,23 +197,31 @@ export class FeeProvider {
   /**
    * Get IGP quote for a Hyperlane transfer from Hub
    *
+   * Each token has its own IGP hook that accepts payment in that token's denom.
+   * The quote returns the fee amount in the token's denomination.
+   *
    * @param params - Quote parameters
-   * @returns IGP fee in adym (smallest unit)
+   * @param params.destinationDomain - Target chain domain ID
+   * @param params.gasLimit - Gas limit for destination execution
+   * @param params.token - Token symbol (DYM, KAS, ETH) to determine which IGP to query
+   * @returns IGP fee in the token's smallest unit
    * @throws Error if quote cannot be fetched
    */
   async quoteIgpPayment(params: {
     destinationDomain: number;
     gasLimit: number;
+    token: TokenSymbol;
   }): Promise<bigint> {
-    const { destinationDomain, gasLimit } = params;
+    const { destinationDomain, gasLimit, token } = params;
 
-    const cacheKey = `${destinationDomain}-${gasLimit}`;
+    const igpHookId = getIgpHookForToken(token);
+    const cacheKey = `${igpHookId}-${destinationDomain}-${gasLimit}`;
     const cached = this.igpQuoteCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.cacheMs) {
       return cached.value;
     }
 
-    const url = `${this.hubRestUrl}/hyperlane/v1/igps/0x01/quote_gas_payment?destination_domain=${destinationDomain}&gas_limit=${gasLimit}`;
+    const url = `${this.hubRestUrl}/hyperlane/v1/igps/${igpHookId}/quote_gas_payment?destination_domain=${destinationDomain}&gas_limit=${gasLimit}`;
     const response = await fetch(url);
 
     if (!response.ok) {
