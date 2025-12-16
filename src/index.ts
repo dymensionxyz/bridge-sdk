@@ -17,7 +17,9 @@ export {
   BSC_CONTRACTS,
   KASPA,
   HUB_MAILBOX,
+  HUB_IGP_HOOKS,
 } from './config/constants.js';
+export type { IgpTokenSymbol } from './config/constants.js';
 export { DEFAULT_RPC_URLS, DEFAULT_REST_URLS } from './config/rpc.js';
 export type { DymensionBridgeConfig, ResolvedConfig } from './config/types.js';
 
@@ -55,6 +57,9 @@ export {
   isTokenAvailableOnChain,
   getTokensOnChain,
   getAllTokenSymbols,
+  // IGP hook helpers for multi-IGP support
+  getIgpHookForToken,
+  hasIgpHook,
 } from './config/tokens.js';
 export type { TokenConfig, TokenSymbol, TokenChainName } from './config/tokens.js';
 

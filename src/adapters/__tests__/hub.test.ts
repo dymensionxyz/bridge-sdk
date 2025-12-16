@@ -7,7 +7,7 @@ import {
   type HubToKaspaParams,
   type HubToSolanaParams,
 } from '../hub.js';
-import { HUB_TOKEN_IDS, DOMAINS } from '../../config/constants.js';
+import { HUB_TOKEN_IDS, DOMAINS, HUB_IGP_HOOKS } from '../../config/constants.js';
 
 describe('Hub Native Warp Module', () => {
   // Test IGP fee (would come from FeeProvider.quoteIgpPayment in production)
@@ -16,6 +16,7 @@ describe('Hub Native Warp Module', () => {
   describe('populateHubToEvmTx', () => {
     const params: HubToEvmParams = {
       tokenId: HUB_TOKEN_IDS.DYM,
+      token: 'DYM',
       destination: DOMAINS.ETHEREUM,
       recipient: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
       amount: 1000000000000000000n,
@@ -40,11 +41,29 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.recipient).not.toContain('0x');
     });
 
-    it('should include IGP payment in maxFee', () => {
+    it('should use token-specific IGP hook', () => {
+      const msg = populateHubToEvmTx(params);
+
+      expect(msg.value.customHookId).toBe(HUB_IGP_HOOKS.DYM);
+    });
+
+    it('should use token-specific denom for maxFee', () => {
       const msg = populateHubToEvmTx(params);
 
       expect(msg.value.maxFee.denom).toBe('adym');
       expect(msg.value.maxFee.amount).toBe(TEST_IGP_FEE.toString());
+    });
+
+    it('should use KAS denom when transferring KAS', () => {
+      const kasParams: HubToEvmParams = {
+        ...params,
+        tokenId: HUB_TOKEN_IDS.KAS,
+        token: 'KAS',
+      };
+      const msg = populateHubToEvmTx(kasParams);
+
+      expect(msg.value.customHookId).toBe(HUB_IGP_HOOKS.KAS);
+      expect(msg.value.maxFee.denom).toBe('hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000000');
     });
 
     it('should convert amount to string', () => {
@@ -58,13 +77,6 @@ describe('Hub Native Warp Module', () => {
       const msg = populateHubToEvmTx(baseParams);
 
       expect(msg.value.destinationDomain).toBe(DOMAINS.BASE);
-    });
-
-    it('should set empty customHookId and customHookMetadata', () => {
-      const msg = populateHubToEvmTx(params);
-
-      expect(msg.value.customHookId).toBe('');
-      expect(msg.value.customHookMetadata).toBe('');
     });
 
     it('should set gasLimit to 0', () => {
@@ -83,7 +95,6 @@ describe('Hub Native Warp Module', () => {
       sender: 'dym1testuser',
       kaspaRecipient: KASPA_MAINNET_ADDRESS,
       amount: 5_000_000_000n, // 50 KAS
-      igpFee: TEST_IGP_FEE,
     };
 
     it('should create a valid MsgRemoteTransfer', () => {
@@ -117,11 +128,11 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.recipient).not.toContain('0x');
     });
 
-    it('should include IGP payment in maxFee', () => {
+    it('should have no IGP fee (exempt route)', () => {
       const msg = populateHubToKaspaTx(params);
 
-      expect(msg.value.maxFee.denom).toBe('adym');
-      expect(msg.value.maxFee.amount).toBe(TEST_IGP_FEE.toString());
+      expect(msg.value.customHookId).toBe('');
+      expect(msg.value.maxFee.amount).toBe('0');
     });
   });
 
@@ -134,7 +145,6 @@ describe('Hub Native Warp Module', () => {
       recipient: SOLANA_ADDRESS,
       amount: 1000000000n,
       sender: 'dym1testuser',
-      igpFee: TEST_IGP_FEE,
     };
 
     it('should create a valid MsgRemoteTransfer', () => {
@@ -164,11 +174,11 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.recipient).not.toContain('0x');
     });
 
-    it('should include IGP payment in maxFee', () => {
+    it('should have no IGP fee (exempt route)', () => {
       const msg = populateHubToSolanaTx(params);
 
-      expect(msg.value.maxFee.denom).toBe('adym');
-      expect(msg.value.maxFee.amount).toBe(TEST_IGP_FEE.toString());
+      expect(msg.value.customHookId).toBe('');
+      expect(msg.value.maxFee.amount).toBe('0');
     });
   });
 });

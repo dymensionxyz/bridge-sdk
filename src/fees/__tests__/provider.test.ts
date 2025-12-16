@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FeeProvider, createFeeProvider, HUB_REST_ENDPOINTS } from '../provider.js';
-import { DOMAINS } from '../../config/constants.js';
+import { DOMAINS, HUB_IGP_HOOKS } from '../../config/constants.js';
 
 describe('FeeProvider', () => {
   const originalFetch = global.fetch;
@@ -97,7 +97,7 @@ describe('FeeProvider', () => {
 
       const provider = new FeeProvider();
       await expect(
-        provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 })
+        provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000, token: 'DYM' })
       ).rejects.toThrow();
     });
 
@@ -110,12 +110,12 @@ describe('FeeProvider', () => {
       } as Response);
 
       const provider = new FeeProvider();
-      const fee = await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 });
+      const fee = await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000, token: 'DYM' });
 
       expect(fee).toBe(50_000_000_000_000_000n);
     });
 
-    it('should cache responses', async () => {
+    it('should cache responses per token', async () => {
       mockFetch().mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -125,11 +125,29 @@ describe('FeeProvider', () => {
 
       const provider = new FeeProvider({ cacheMs: 60000 });
 
-      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 });
-      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000 });
+      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000, token: 'DYM' });
+      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000, token: 'DYM' });
 
       // Should only fetch once due to caching
       expect(mockFetch()).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use correct IGP hook for each token', async () => {
+      mockFetch().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          gas_payment: [{ denom: 'kas', amount: '1000000' }],
+        }),
+      } as Response);
+
+      const provider = new FeeProvider({ cacheMs: 60000 });
+
+      await provider.quoteIgpPayment({ destinationDomain: DOMAINS.ETHEREUM, gasLimit: 200000, token: 'KAS' });
+
+      // Verify the URL contains the KAS IGP hook
+      expect(mockFetch()).toHaveBeenCalledWith(
+        expect.stringContaining(HUB_IGP_HOOKS.KAS)
+      );
     });
   });
 

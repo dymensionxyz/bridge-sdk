@@ -44,11 +44,13 @@ import { addressToHyperlane, createIbcTimeoutTimestamp } from './utils/index.js'
  */
 export interface HubToEvmParams {
   tokenId: string;
+  /** Token symbol (DYM, KAS, ETH) - determines IGP hook and maxFee denom */
+  token: TokenSymbol;
   destination: number;
   recipient: string;
   amount: bigint;
   sender: string;
-  /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
+  /** IGP fee in the token's hub denom (get from FeeProvider.quoteIgpPayment) */
   igpFee: bigint;
 }
 
@@ -77,13 +79,14 @@ export interface SolanaToHubParams {
 
 /**
  * Parameters for Hub to Solana transfers
+ *
+ * Note: Hub to Solana is an exempt route - no IGP payment required.
  */
 export interface HubToSolanaParams {
   tokenId: string;
   recipient: string;
   amount: bigint;
   sender: string;
-  maxFee?: { denom: string; amount: string };
 }
 
 /**
@@ -96,6 +99,8 @@ export interface EstimateFeesParams {
   eibcFeePercent?: number;
   /** Token ID for fetching bridging fee rate */
   tokenId?: string;
+  /** Token symbol for IGP hook selection (DYM, KAS, ETH) */
+  token?: TokenSymbol;
   /** Gas limit for IGP calculation (defaults to 200000) */
   gasLimit?: number;
 }
@@ -189,6 +194,7 @@ export class BridgeClient {
    * Create unsigned transaction for Hub -> Solana transfer
    *
    * Uses MsgRemoteTransfer for the native Hyperlane warp module.
+   * Note: Hub to Solana is an exempt route - no IGP payment required.
    */
   async populateHubToSolanaTx(params: HubToSolanaParams): Promise<MsgRemoteTransfer> {
     return populateHubToSolanaTxAdapter({
@@ -197,7 +203,6 @@ export class BridgeClient {
       amount: params.amount,
       sender: params.sender,
       network: this.config.network,
-      igpFee: params.maxFee?.amount ? BigInt(params.maxFee.amount) : 0n,
     });
   }
 
@@ -205,20 +210,18 @@ export class BridgeClient {
    * Create unsigned transaction for Hub -> Kaspa transfer
    *
    * Uses MsgRemoteTransfer for the Hyperlane warp module (native SDK message).
+   * Note: Hub to Kaspa is an exempt route - no IGP payment required.
    */
   async populateHubToKaspaTx(params: {
     kaspaRecipient: string;
     amount: bigint;
     sender: string;
-    /** IGP fee in adym (get from FeeProvider.quoteIgpPayment) */
-    igpFee: bigint;
   }): Promise<MsgRemoteTransfer> {
     return populateHubToKaspaTx({
       sender: params.sender,
       kaspaRecipient: params.kaspaRecipient,
       amount: params.amount,
       network: this.config.network,
-      igpFee: params.igpFee,
     });
   }
 
@@ -304,7 +307,7 @@ export class BridgeClient {
    * @returns Breakdown of all fees and recipient amount
    */
   async estimateFees(params: EstimateFeesParams): Promise<FeeBreakdown> {
-    const { source, destination, amount, eibcFeePercent, tokenId, gasLimit } = params;
+    const { source, destination, amount, eibcFeePercent, tokenId, token, gasLimit } = params;
     const network = this.config.network;
 
     // Get dynamic bridging fee rate from chain
@@ -321,14 +324,17 @@ export class BridgeClient {
     }
 
     // Calculate IGP fee based on destination
+    // Note: IGP is only required for Hub -> EVM transfers, not for Hub -> Kaspa/Solana (exempt routes)
     let igpFee = 0n;
     const destConfig = getChainConfig(destination as ChainName);
-    if (destConfig.type === 'hyperlane' || destConfig.type === 'hub') {
+    const isExemptRoute = destination === 'kaspa' || destination === 'solana';
+    if ((destConfig.type === 'hyperlane' || destConfig.type === 'hub') && !isExemptRoute && token) {
       const domain = getHyperlaneDomain(destination as ChainName, network);
       const effectiveGasLimit = gasLimit ?? 200_000;
       igpFee = await this.feeProvider.quoteIgpPayment({
         destinationDomain: domain,
         gasLimit: effectiveGasLimit,
+        token,
       });
     }
 
@@ -460,14 +466,19 @@ export class BridgeClient {
       // Convert recipient to Hyperlane bytes32 format
       const recipientBytes32 = addressToHyperlane(recipient, to);
 
-      // Fetch IGP fee from chain
-      const igpFee = await this.feeProvider.quoteIgpPayment({
-        destinationDomain: domain,
-        gasLimit: 200_000,
-      });
+      // Fetch IGP fee from chain (only for EVM destinations, not Kaspa/Solana)
+      const isExemptRoute = to === 'kaspa' || to === 'solana';
+      const igpFee = isExemptRoute
+        ? 0n
+        : await this.feeProvider.quoteIgpPayment({
+            destinationDomain: domain,
+            gasLimit: 200_000,
+            token,
+          });
 
       const tx = await this.populateHubToEvmTx({
         tokenId,
+        token,
         destination: domain,
         recipient: recipientBytes32,
         amount,
@@ -642,11 +653,17 @@ export class BridgeClient {
       // Forward to another Hyperlane chain
       const destDomain = getHyperlaneDomain(to, network);
 
+      // Check if destination is an exempt route (no IGP needed)
+      const isExemptRoute = to === 'kaspa' || to === 'solana';
+
       // Fetch fees dynamically for proper calculation
-      const hop2IgpFee = await this.feeProvider.quoteIgpPayment({
-        destinationDomain: destDomain,
-        gasLimit: 200_000,
-      });
+      const hop2IgpFee = isExemptRoute
+        ? 0n
+        : await this.feeProvider.quoteIgpPayment({
+            destinationDomain: destDomain,
+            gasLimit: 200_000,
+            token,
+          });
 
       // Fetch bridging fee rates
       let hop1InboundBridgingFeeRate = 0;
@@ -664,6 +681,7 @@ export class BridgeClient {
       const fwdCalc = calculateForwardingFees({
         amount,
         routeType,
+        token,
         hop1InboundBridgingFeeRate,
         hop2IgpFee,
         hop2OutboundBridgingFeeRate,
@@ -671,14 +689,15 @@ export class BridgeClient {
 
       const recipientBytes32 = addressToHyperlane(recipient, to);
 
-      // Use calculated forwardAmount and maxFee from the fee calculator
+      // Use calculated forwardAmount, maxFee, and customHookId from the fee calculator
       metadata = createHLMetadataForHL({
         transfer: {
           tokenId,
           destinationDomain: destDomain,
           recipient: recipientBytes32,
           amount: fwdCalc.forwardAmount.toString(),
-          maxFee: { denom: 'adym', amount: fwdCalc.maxFee.toString() },
+          maxFee: { denom: fwdCalc.hop2Fees.maxFeeDenom, amount: fwdCalc.maxFee.toString() },
+          customHookId: fwdCalc.hop2Fees.customHookId || undefined,
         },
       });
     } else if (toConfig.type === 'ibc') {
