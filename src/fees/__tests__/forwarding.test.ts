@@ -24,18 +24,24 @@ describe('Forwarding Fee Calculations', () => {
       // hubBudget = 100 (no inbound fee)
       expect(result.hubBudget).toBe(100n * 10n ** 18n);
 
-      // forwardAmount = hubBudget - maxFee = 100 - 0.5 = 99.5
-      expect(result.forwardAmount).toBe(995n * 10n ** 17n);
+      // budgetAfterIgp = 100 - 0.5 = 99.5
+      // forwardAmount = budgetAfterIgp / (1 + rate) = 99.5 / 1.001 ≈ 99.4006
+      // (forwardAmount + bridgingFee = budgetAfterIgp constraint)
+      const budgetAfterIgp = 100n * 10n ** 18n - 5n * 10n ** 17n;
+      const ratePrecision = 1_000_000n;
+      const rateScaled = 1000n; // 0.001 * 1_000_000
+      const expectedForwardAmount = (budgetAfterIgp * ratePrecision) / (ratePrecision + rateScaled);
+      expect(result.forwardAmount).toBe(expectedForwardAmount);
 
-      // maxFee = IGP fee
-      expect(result.maxFee).toBe(5n * 10n ** 17n);
-
-      // outboundBridgingFee = 99.5 * 0.001 = 0.0995
-      const expectedOutboundFee = BigInt(Math.floor(995 * 10 ** 17 * 0.001));
+      // outboundBridgingFee = forwardAmount * 0.001
+      const expectedOutboundFee = (expectedForwardAmount * rateScaled) / ratePrecision;
       expect(result.hop2Fees.outboundBridgingFee).toBe(expectedOutboundFee);
 
-      // recipientReceives = forwardAmount - outboundFee
-      expect(result.recipientReceives).toBe(result.forwardAmount - expectedOutboundFee);
+      // maxFee = IGP + bridgingFee (both charged from maxFee)
+      expect(result.maxFee).toBe(5n * 10n ** 17n + expectedOutboundFee);
+
+      // recipientReceives = forwardAmount (no deduction - bridging fee comes from maxFee)
+      expect(result.recipientReceives).toBe(result.forwardAmount);
 
       // Verify customHookId and maxFeeDenom
       expect(result.hop2Fees.customHookId).toBe(HUB_IGP_HOOKS.DYM);
@@ -60,8 +66,16 @@ describe('Forwarding Fee Calculations', () => {
       // hubBudget = 100 - 0.1 = 99.9
       expect(result.hubBudget).toBe(999n * 10n ** 17n);
 
-      // forwardAmount = 99.9 - 0.5 = 99.4
-      expect(result.forwardAmount).toBe(994n * 10n ** 17n);
+      // budgetAfterIgp = 99.9 - 0.5 = 99.4
+      // forwardAmount = budgetAfterIgp / (1 + rate) = 99.4 / 1.001 ≈ 99.3007
+      const budgetAfterIgp = 999n * 10n ** 17n - 5n * 10n ** 17n;
+      const ratePrecision = 1_000_000n;
+      const rateScaled = 1000n; // 0.001 * 1_000_000
+      const expectedForwardAmount = (budgetAfterIgp * ratePrecision) / (ratePrecision + rateScaled);
+      expect(result.forwardAmount).toBe(expectedForwardAmount);
+
+      // recipientReceives = forwardAmount (no deduction)
+      expect(result.recipientReceives).toBe(result.forwardAmount);
     });
 
     it('calculates RollApp -> Hub -> HL with EIBC fees', () => {
@@ -113,10 +127,15 @@ describe('Forwarding Fee Calculations', () => {
 
       const result = calculateForwardingFees(params);
 
-      // Verify: inputAmount - totalFees = recipientReceives + maxFee deducted
+      // Verify: inputAmount - totalFees ≈ recipientReceives (may be off by 1 due to rounding)
       const reconstructedRecipient =
         result.inputAmount - result.totalFeesDeductedFromTransfer;
-      expect(reconstructedRecipient).toBe(result.recipientReceives);
+      // Allow for rounding difference of 1 unit
+      const diff =
+        reconstructedRecipient > result.recipientReceives
+          ? reconstructedRecipient - result.recipientReceives
+          : result.recipientReceives - reconstructedRecipient;
+      expect(diff).toBeLessThanOrEqual(1n);
     });
 
     it('handles zero fees correctly for IBC destination (exempt route)', () => {
@@ -155,12 +174,14 @@ describe('Forwarding Fee Calculations', () => {
       // Verify all amounts are positive and make sense
       expect(result.hubBudget).toBeLessThan(amount);
       expect(result.forwardAmount).toBeLessThan(result.hubBudget);
-      expect(result.recipientReceives).toBeLessThan(result.forwardAmount);
+      // In new model: recipientReceives = forwardAmount (bridging fee comes from maxFee)
+      expect(result.recipientReceives).toBe(result.forwardAmount);
       expect(result.recipientReceives).toBeGreaterThan(0n);
 
-      // Should receive approximately 1000 - 0.1% - IGP - 0.1% ≈ 997.5 USDC
+      // Should receive approximately 1000 - 0.1% inbound - IGP - bridgingFee ≈ 997.5 USDC
+      // (bridgingFee now comes from maxFee, so recipient gets more)
       expect(result.recipientReceives).toBeGreaterThan(997n * 10n ** 6n);
-      expect(result.recipientReceives).toBeLessThan(998n * 10n ** 6n);
+      expect(result.recipientReceives).toBeLessThan(999n * 10n ** 6n);
     });
 
     it('uses KAS-specific IGP hook and denom for KAS transfers', () => {
