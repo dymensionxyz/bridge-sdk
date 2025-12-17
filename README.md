@@ -10,31 +10,24 @@ Manual testing status for each transfer route. Routes are marked as they are ver
 
 | Source | Destination | Route Type | Status | Notes |
 |--------|-------------|------------|--------|-------|
-| **Hub** | EVM (ETH/Base/BSC) | Direct | :white_circle: | |
-| **Hub** | Solana | Direct (exempt) | :white_circle: | No IGP fee |
-| **Hub** | Kaspa | Direct (exempt) | :white_circle: | No IGP fee |
-| **Hub** | IBC (Osmosis/etc) | Direct | :white_circle: | Standard IBC |
+| **Hub** | Hyperlane | Direct | :white_circle: | MsgRemoteTransfer |
+| **Hub** | IBC | Direct | :white_circle: | Standard IBC |
 | **EVM** | Hub | Direct | :white_circle: | |
 | **Solana** | Hub | Direct | :white_circle: | |
-| **Kaspa** | Hub | Direct | :white_circle: | Uses Rust CLI |
+| **Kaspa** | Hub | Direct | :white_circle: | Rust CLI for signing |
 | **IBC** | Hub | Direct | :white_circle: | Standard IBC |
-| **EVM** | EVM | Via Hub | :white_circle: | HL forwarding |
-| **EVM** | Solana | Via Hub | :white_circle: | HL forwarding |
-| **EVM** | Kaspa | Via Hub | :white_circle: | HL forwarding |
+| **EVM** | Hyperlane | Via Hub | :white_circle: | HL forwarding |
 | **EVM** | IBC | Via Hub | :white_circle: | IBC forwarding |
-| **Solana** | EVM | Via Hub | :white_circle: | HL forwarding |
+| **Solana** | Hyperlane | Via Hub | :white_circle: | HL forwarding |
 | **Solana** | IBC | Via Hub | :white_circle: | IBC forwarding |
-| **Solana** | Kaspa | Via Hub | :white_circle: | HL forwarding |
-| **Kaspa** | EVM | Via Hub | :white_circle: | HL forwarding |
+| **Kaspa** | Hyperlane | Via Hub | :white_circle: | HL forwarding |
 | **Kaspa** | IBC | Via Hub | :white_circle: | IBC forwarding |
-| **Kaspa** | Solana | Via Hub | :white_circle: | HL forwarding |
 | **RollApp** | Hub | Direct | :white_circle: | EIBC withdrawal |
-| **RollApp** | EVM | Via Hub | :white_circle: | EIBC + HL forward |
-| **RollApp** | Solana | Via Hub | :white_circle: | EIBC + HL forward |
-| **RollApp** | Kaspa | Via Hub | :white_circle: | EIBC + HL forward |
-| **IBC** | EVM | Via Hub | :white_circle: | PFM + HL forward |
-| **IBC** | Solana | Via Hub | :white_circle: | PFM + HL forward |
-| **IBC** | Kaspa | Via Hub | :white_circle: | PFM + HL forward |
+| **RollApp** | Hyperlane | Via Hub | :white_circle: | EIBC + HL forward |
+| **IBC** | Hyperlane | Via Hub | :white_circle: | PFM + HL forward |
+
+**Hyperlane chains**: Ethereum, Base, BSC, Solana, Kaspa
+**IBC chains**: Osmosis, Cosmos Hub, Celestia, Noble
 
 **Legend:** :white_check_mark: Tested | :white_circle: Untested | :x: Known issue
 
