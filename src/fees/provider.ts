@@ -129,7 +129,10 @@ export class FeeProvider {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch delayedack params: HTTP ${response.status}`);
+      throw new Error(
+        `Failed to fetch delayedack params: HTTP ${response.status}. ` +
+          `url=${url}`
+      );
     }
 
     const data = await response.json();
@@ -187,7 +190,10 @@ export class FeeProvider {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Failed to quote bridging fee: HTTP ${response.status}`);
+      throw new Error(
+        `Failed to quote bridging fee: HTTP ${response.status}. ` +
+          `hookId=${hookId}, tokenId=${tokenId}, amount=${amount}`
+      );
     }
 
     const data = await response.json();
@@ -225,7 +231,19 @@ export class FeeProvider {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`IGP quote failed: HTTP ${response.status}`);
+      // Try to get error details from response body
+      let errorDetail = '';
+      try {
+        const errorBody = await response.json();
+        errorDetail = errorBody.message || JSON.stringify(errorBody);
+      } catch {
+        errorDetail = await response.text().catch(() => '');
+      }
+      throw new Error(
+        `IGP quote failed: HTTP ${response.status}. ` +
+          `token=${token}, destinationDomain=${destinationDomain}, gasLimit=${gasLimit}. ` +
+          (errorDetail ? `Detail: ${errorDetail}` : '')
+      );
     }
 
     const data: IgpQuoteResponse = await response.json();
@@ -298,7 +316,10 @@ export class FeeProvider {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch fee hooks: HTTP ${response.status}`);
+      throw new Error(
+        `Failed to fetch fee hooks: HTTP ${response.status}. ` +
+          `url=${url}`
+      );
     }
 
     const data = await response.json();
