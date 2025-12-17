@@ -115,23 +115,34 @@ export interface HubToKaspaParams {
   amount: bigint;
   /** Network selection */
   network?: 'mainnet' | 'testnet';
+  /** IGP fee in KAS denom (required - get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
  * Populate a Hub to Kaspa transfer transaction
  *
  * Creates a MsgRemoteTransfer for the Hyperlane warp module.
- * Note: Hub to Kaspa transfers do not require IGP payment (exempt route).
+ * Requires IGP fee payment via the KAS IGP hook.
  *
  * @param params - Transfer parameters
  * @returns MsgRemoteTransfer message ready for signing with CosmJS
  *
  * @example
  * ```typescript
+ * // Get IGP fee from fee provider
+ * const feeProvider = createFeeProvider({ network: 'mainnet' });
+ * const igpFee = await feeProvider.quoteIgpPayment({
+ *   destinationDomain: DOMAINS.KASPA_MAINNET,
+ *   gasLimit: 200_000,
+ *   token: 'KAS',
+ * });
+ *
  * const msg = populateHubToKaspaTx({
  *   sender: 'dym1...',
  *   kaspaRecipient: 'kaspa:qr...',
  *   amount: 5_000_000_000n, // 50 KAS
+ *   igpFee,
  * });
  *
  * const result = await client.signAndBroadcast(sender, [msg], 'auto');
@@ -143,6 +154,7 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
     kaspaRecipient,
     amount,
     network = 'mainnet',
+    igpFee,
   } = params;
 
   const destinationDomain = network === 'mainnet'
@@ -152,7 +164,10 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
   // Convert Kaspa address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = kaspaAddressToHyperlane(kaspaRecipient);
 
-  // Hub to Kaspa is an exempt route - no IGP required
+  // Get KAS-specific IGP hook and denom
+  const customHookId = getIgpHookForToken('KAS');
+  const igpDenom = getHubDenom('KAS');
+
   return {
     typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
     value: {
@@ -161,11 +176,11 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
       destinationDomain,
       recipient: recipientHex,
       amount: amount.toString(),
-      customHookId: '',
+      customHookId,
       gasLimit: '0',
       maxFee: {
-        denom: 'adym',
-        amount: '0',
+        denom: igpDenom,
+        amount: igpFee.toString(),
       },
       customHookMetadata: '',
     },
@@ -178,6 +193,8 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
 export interface HubToSolanaParams {
   /** Hub token ID */
   tokenId: string;
+  /** Token symbol for IGP hook selection (DYM, KAS, ETH) */
+  token: TokenSymbol;
   /** Solana recipient address (base58 public key) */
   recipient: string;
   /** Amount in smallest unit */
@@ -186,13 +203,15 @@ export interface HubToSolanaParams {
   sender: string;
   /** Network selection */
   network?: 'mainnet' | 'testnet';
+  /** IGP fee in the token's hub denom (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
  * Populate a Hub to Solana transfer transaction
  *
  * Creates a MsgRemoteTransfer for the Hyperlane warp module.
- * Note: Hub to Solana transfers do not require IGP payment (exempt route).
+ * Requires IGP fee payment via the token-specific IGP hook.
  *
  * @param params - Transfer parameters
  * @returns MsgRemoteTransfer message ready for signing with CosmJS
@@ -200,10 +219,12 @@ export interface HubToSolanaParams {
 export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTransfer {
   const {
     tokenId,
+    token,
     recipient,
     amount,
     sender,
     network = 'mainnet',
+    igpFee,
   } = params;
 
   const destinationDomain = network === 'mainnet'
@@ -213,7 +234,10 @@ export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTrans
   // Convert Solana address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = solanaAddressToHyperlane(recipient);
 
-  // Hub to Solana is an exempt route - no IGP required
+  // Get token-specific IGP hook and denom
+  const customHookId = getIgpHookForToken(token);
+  const igpDenom = getHubDenom(token);
+
   return {
     typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
     value: {
@@ -222,11 +246,11 @@ export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTrans
       destinationDomain,
       recipient: recipientHex,
       amount: amount.toString(),
-      customHookId: '',
+      customHookId,
       gasLimit: '0',
       maxFee: {
-        denom: 'adym',
-        amount: '0',
+        denom: igpDenom,
+        amount: igpFee.toString(),
       },
       customHookMetadata: '',
     },

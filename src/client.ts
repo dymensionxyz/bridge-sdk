@@ -80,13 +80,17 @@ export interface SolanaToHubParams {
 /**
  * Parameters for Hub to Solana transfers
  *
- * Note: Hub to Solana is an exempt route - no IGP payment required.
+ * Requires IGP fee payment via the token-specific IGP hook.
  */
 export interface HubToSolanaParams {
   tokenId: string;
+  /** Token symbol (DYM, KAS, ETH) - determines IGP hook and maxFee denom */
+  token: TokenSymbol;
   recipient: string;
   amount: bigint;
   sender: string;
+  /** IGP fee in the token's hub denom (get from FeeProvider.quoteIgpPayment) */
+  igpFee: bigint;
 }
 
 /**
@@ -194,15 +198,17 @@ export class BridgeClient {
    * Create unsigned transaction for Hub -> Solana transfer
    *
    * Uses MsgRemoteTransfer for the native Hyperlane warp module.
-   * Note: Hub to Solana is an exempt route - no IGP payment required.
+   * Requires IGP fee payment via the token-specific IGP hook.
    */
   async populateHubToSolanaTx(params: HubToSolanaParams): Promise<MsgRemoteTransfer> {
     return populateHubToSolanaTxAdapter({
       tokenId: params.tokenId,
+      token: params.token,
       recipient: params.recipient,
       amount: params.amount,
       sender: params.sender,
       network: this.config.network,
+      igpFee: params.igpFee,
     });
   }
 
@@ -210,18 +216,21 @@ export class BridgeClient {
    * Create unsigned transaction for Hub -> Kaspa transfer
    *
    * Uses MsgRemoteTransfer for the Hyperlane warp module (native SDK message).
-   * Note: Hub to Kaspa is an exempt route - no IGP payment required.
+   * Requires IGP fee payment via the KAS IGP hook.
    */
   async populateHubToKaspaTx(params: {
     kaspaRecipient: string;
     amount: bigint;
     sender: string;
+    /** IGP fee in KAS denom (get from FeeProvider.quoteIgpPayment) */
+    igpFee: bigint;
   }): Promise<MsgRemoteTransfer> {
     return populateHubToKaspaTx({
       sender: params.sender,
       kaspaRecipient: params.kaspaRecipient,
       amount: params.amount,
       network: this.config.network,
+      igpFee: params.igpFee,
     });
   }
 
@@ -323,19 +332,25 @@ export class BridgeClient {
       eibcFee = multiplyByRate(amount, eibcFeePercent / 100);
     }
 
-    // Calculate IGP fee based on destination
-    // Note: IGP is only required for Hub -> EVM transfers, not for Hub -> Kaspa/Solana (exempt routes)
+    // Calculate IGP fee based on destination - always query dynamically
+    // The chain may return 0 for exempt routes, but we always query to be sure
     let igpFee = 0n;
     const destConfig = getChainConfig(destination as ChainName);
-    const isExemptRoute = destination === 'kaspa' || destination === 'solana';
-    if ((destConfig.type === 'hyperlane' || destConfig.type === 'hub') && !isExemptRoute && token) {
+    if ((destConfig.type === 'hyperlane' || destConfig.type === 'hub') && token) {
       const domain = getHyperlaneDomain(destination as ChainName, network);
       const effectiveGasLimit = gasLimit ?? 200_000;
-      igpFee = await this.feeProvider.quoteIgpPayment({
-        destinationDomain: domain,
-        gasLimit: effectiveGasLimit,
-        token,
-      });
+      // Use the appropriate token for IGP (KAS for Kaspa destination)
+      const igpToken = destination === 'kaspa' ? 'KAS' : token;
+      try {
+        igpFee = await this.feeProvider.quoteIgpPayment({
+          destinationDomain: domain,
+          gasLimit: effectiveGasLimit,
+          token: igpToken,
+        });
+      } catch {
+        // If IGP quote fails (e.g., no IGP configured for route), fee is 0
+        igpFee = 0n;
+      }
     }
 
     // Estimate transaction fee (varies by chain, use placeholder)
@@ -463,10 +478,19 @@ export class BridgeClient {
     if (toConfig.type === 'hyperlane' || toConfig.type === 'hub') {
       // Route to appropriate adapter based on destination chain
       if (to === 'kaspa') {
+        // Query IGP fee for Kaspa destination
+        const domain = getHyperlaneDomain(to, network);
+        const igpFee = await this.feeProvider.quoteIgpPayment({
+          destinationDomain: domain,
+          gasLimit: 200_000,
+          token: 'KAS',
+        });
+
         const tx = await this.populateHubToKaspaTx({
           kaspaRecipient: recipient,
           amount,
           sender,
+          igpFee,
         });
         return {
           type: 'cosmos',
@@ -476,11 +500,27 @@ export class BridgeClient {
       }
 
       if (to === 'solana') {
+        // Query IGP fee for Solana destination
+        const domain = getHyperlaneDomain(to, network);
+        let igpFee = 0n;
+        try {
+          igpFee = await this.feeProvider.quoteIgpPayment({
+            destinationDomain: domain,
+            gasLimit: 200_000,
+            token,
+          });
+        } catch {
+          // If IGP quote fails, use 0 (may be exempt)
+          igpFee = 0n;
+        }
+
         const tx = await this.populateHubToSolanaTx({
           tokenId,
+          token,
           recipient,
           amount,
           sender,
+          igpFee,
         });
         return {
           type: 'cosmos',
@@ -674,17 +714,20 @@ export class BridgeClient {
       // Forward to another Hyperlane chain
       const destDomain = getHyperlaneDomain(to, network);
 
-      // Check if destination is an exempt route (no IGP needed)
-      const isExemptRoute = to === 'kaspa' || to === 'solana';
-
-      // Fetch fees dynamically for proper calculation
-      const hop2IgpFee = isExemptRoute
-        ? 0n
-        : await this.feeProvider.quoteIgpPayment({
-            destinationDomain: destDomain,
-            gasLimit: 200_000,
-            token,
-          });
+      // Fetch IGP fee dynamically - always query, chain may return 0 for exempt routes
+      // Use KAS token for Kaspa destination IGP
+      const igpToken = to === 'kaspa' ? 'KAS' : token;
+      let hop2IgpFee = 0n;
+      try {
+        hop2IgpFee = await this.feeProvider.quoteIgpPayment({
+          destinationDomain: destDomain,
+          gasLimit: 200_000,
+          token: igpToken,
+        });
+      } catch {
+        // If IGP quote fails (e.g., no IGP configured for route), fee is 0
+        hop2IgpFee = 0n;
+      }
 
       // Fetch bridging fee rates
       let hop1InboundBridgingFeeRate = 0;
