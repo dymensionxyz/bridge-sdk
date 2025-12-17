@@ -191,14 +191,23 @@ export function calculateForwardingFees(params: ForwardingParams): ForwardingCal
   }
 
   // Note: IBC -> Hub has no inbound fee
+  // Note: HL -> Hub inbound bridging fee is assumed to be 0 (not currently charged)
 
   // Calculate hop 2 fees
-  // The key constraint: maxFee + forwardAmount <= hubBudget
-  // And outbound bridging fee is deducted from forwardAmount during dispatch
+  // Key insight: For Hyperlane outbound (Hub -> External), BOTH IGP and bridging fee
+  // are charged from maxFee. The recipient receives the FULL forwardAmount.
+  // Constraint: maxFee + forwardAmount <= hubBudget
 
-  // First, reserve IGP fee from the budget
-  const maxFee = hop2IgpFee;
-  const budgetAfterIgp = hubBudget - maxFee;
+  // Calculate outbound bridging fee based on what we want to forward
+  // We need to solve: maxFee + forwardAmount = hubBudget
+  // where maxFee = igpFee + bridgingFee(forwardAmount)
+  // So: igpFee + bridgingFee(forwardAmount) + forwardAmount = hubBudget
+  // bridgingFee = forwardAmount * rate
+  // igpFee + forwardAmount * rate + forwardAmount = hubBudget
+  // forwardAmount * (1 + rate) = hubBudget - igpFee
+  // forwardAmount = (hubBudget - igpFee) / (1 + rate)
+
+  const budgetAfterIgp = hubBudget - hop2IgpFee;
 
   if (budgetAfterIgp <= 0n) {
     throw new Error(
@@ -207,32 +216,40 @@ export function calculateForwardingFees(params: ForwardingParams): ForwardingCal
     );
   }
 
-  // The forwardAmount is what we send, and outbound bridging fee is deducted from it
-  // recipientReceives = forwardAmount - outboundBridgingFee
-  // So: forwardAmount = budgetAfterIgp (we forward everything available after IGP)
-  const forwardAmount = budgetAfterIgp;
+  // Calculate forwardAmount such that forwardAmount + bridgingFee(forwardAmount) = budgetAfterIgp
+  // forwardAmount = budgetAfterIgp / (1 + rate)
+  const ratePrecision = 1_000_000n;
+  const rateScaled = BigInt(Math.floor(hop2OutboundBridgingFeeRate * Number(ratePrecision)));
+  const forwardAmount = (budgetAfterIgp * ratePrecision) / (ratePrecision + rateScaled);
 
-  // Calculate outbound bridging fee (deducted during dispatch)
+  // Calculate the actual bridging fee based on forwardAmount
   const outboundBridgingFee = calculateBridgingFee(forwardAmount, hop2OutboundBridgingFeeRate);
-  const recipientReceives = forwardAmount - outboundBridgingFee;
+
+  // maxFee = IGP + bridging fee (both charged from maxFee, not from transfer amount)
+  const maxFee = hop2IgpFee + outboundBridgingFee;
+
+  // Recipient receives the FULL forwardAmount (no deduction)
+  const recipientReceives = forwardAmount;
 
   const hop2Fees: Hop2Fees = {
-    igpFee: maxFee,
+    igpFee: hop2IgpFee,
     outboundBridgingFee,
     customHookId,
     maxFeeDenom,
   };
 
-  // Calculate total fees deducted from the transfer amount
-  // (IGP on hop 1 is paid separately, not from transfer)
-  let totalFeesDeductedFromTransfer = hop1Fees.inboundBridgingFee + hop2Fees.outboundBridgingFee;
+  // Calculate total fees deducted from the sender's perspective
+  // Hop 1: EIBC and delayedAck fees are deducted from transfer amount (for IBC inbound)
+  // Hop 1: Inbound bridging fee (currently 0 for HL->Hub)
+  // Hop 2: IGP + bridging fee come from maxFee (deducted from hubBudget)
+  let totalFeesDeductedFromTransfer = hop1Fees.inboundBridgingFee;
   if (hop1Fees.eibcFee) {
     totalFeesDeductedFromTransfer += hop1Fees.eibcFee;
   }
   if (hop1Fees.delayedAckBridgingFee) {
     totalFeesDeductedFromTransfer += hop1Fees.delayedAckBridgingFee;
   }
-  // Note: hop2 IGP (maxFee) is also deducted from the transfer amount
+  // Hop 2: maxFee (IGP + bridging) is deducted from hubBudget
   totalFeesDeductedFromTransfer += maxFee;
 
   return {
@@ -284,22 +301,19 @@ export function calculateForwardingSendAmount(
     hop2OutboundBridgingFeeRate,
   } = params;
 
-  // Convert rates to bigint
-  const outboundRateBig = rateToBigInt(hop2OutboundBridgingFeeRate);
-
   // Work backwards from recipient amount
-  // recipientReceives = forwardAmount - outboundBridgingFee
-  // recipientReceives = forwardAmount * (1 - outboundRate)
-  // forwardAmount = recipientReceives / (1 - outboundRate)
-  // forwardAmount = recipientReceives * PRECISION / (PRECISION - outboundRateBig)
-  const oneMinusOutbound = PRECISION - outboundRateBig;
-  // Round up: (a + b - 1) / b
-  const forwardAmount =
-    (desiredRecipientAmount * PRECISION + oneMinusOutbound - 1n) / oneMinusOutbound;
+  // New model: recipientReceives = forwardAmount (no outbound deduction)
+  // So forwardAmount = desiredRecipientAmount
+  const forwardAmount = desiredRecipientAmount;
 
-  // forwardAmount = hubBudget - maxFee
+  // Calculate bridging fee for this forwardAmount
+  const outboundBridgingFee = calculateBridgingFee(forwardAmount, hop2OutboundBridgingFeeRate);
+
+  // maxFee = IGP + bridgingFee (both from maxFee, not transfer amount)
+  const maxFee = hop2IgpFee + outboundBridgingFee;
+
   // hubBudget = forwardAmount + maxFee
-  const hubBudget = forwardAmount + hop2IgpFee;
+  const hubBudget = forwardAmount + maxFee;
 
   // Calculate hop 1 deductions rate (in bigint)
   let hop1DeductionRateBig = 0n;

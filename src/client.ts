@@ -357,8 +357,10 @@ export class BridgeClient {
     const txFee = 50_000n; // Placeholder - actual fee depends on chain and gas price
 
     // Calculate totals
+    // Note: For Hyperlane outbound transfers, bridgingFee + igpFee are paid via maxFee (separate from amount)
+    // Only EIBC/delayedAck fees (IBC inbound from RollApps) are deducted from the transfer amount
     const totalFees = bridgingFee + (eibcFee ?? 0n) + igpFee + txFee;
-    const recipientReceives = amount - bridgingFee - (eibcFee ?? 0n);
+    const recipientReceives = amount - (eibcFee ?? 0n);
 
     return {
       bridgingFee,
