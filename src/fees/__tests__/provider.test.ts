@@ -53,16 +53,15 @@ describe('FeeProvider', () => {
       await expect(provider.getBridgingFeeRate('0x123', 'outbound')).rejects.toThrow();
     });
 
-    it('should throw when token not found', async () => {
+    it('should return 0 when token not found (no fee configured)', async () => {
       mockFetch().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ fee_hooks: [] }),
       } as Response);
 
       const provider = new FeeProvider();
-      await expect(provider.getBridgingFeeRate('0xunknown', 'outbound')).rejects.toThrow(
-        'No fee configuration found for token: 0xunknown'
-      );
+      const rate = await provider.getBridgingFeeRate('0xunknown', 'outbound');
+      expect(rate).toBe(0);
     });
 
     it('should return fee rate from API response', async () => {
