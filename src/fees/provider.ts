@@ -148,8 +148,7 @@ export class FeeProvider {
    *
    * @param tokenId - Hyperlane token ID (hex address)
    * @param direction - 'inbound' (to Hub) or 'outbound' (from Hub)
-   * @returns Fee rate as decimal (e.g., 0.001 for 0.1%)
-   * @throws Error if fee cannot be fetched
+   * @returns Fee rate as decimal (e.g., 0.001 for 0.1%), or 0 if no fee is configured
    */
   async getBridgingFeeRate(
     tokenId: string,
@@ -167,7 +166,8 @@ export class FeeProvider {
       }
     }
 
-    throw new Error(`No fee configuration found for token: ${tokenId}`);
+    // No fee configured for this token - return 0 (exempt from bridging fee)
+    return 0;
   }
 
   /**

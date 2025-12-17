@@ -320,9 +320,25 @@ export class BridgeClient {
     const network = this.config.network;
 
     // Get dynamic bridging fee rate from chain
-    const bridgingFeeRate = tokenId
-      ? await this.feeProvider.getBridgingFeeRate(tokenId, 'outbound')
-      : 0.001; // Default 0.1% if no tokenId provided
+    // Derive tokenId from token symbol if not provided
+    let effectiveTokenId = tokenId;
+    if (!effectiveTokenId && token) {
+      try {
+        effectiveTokenId = getHubTokenId(token);
+      } catch {
+        // Token not configured - will use default rate
+      }
+    }
+    // For Kaspa destination, use KAS token ID if not specified
+    if (!effectiveTokenId && destination === 'kaspa') {
+      effectiveTokenId = getHubTokenId('KAS');
+    }
+
+    // Fetch bridging fee rate from chain, default to 0 if not configured
+    let bridgingFeeRate = 0;
+    if (effectiveTokenId) {
+      bridgingFeeRate = await this.feeProvider.getBridgingFeeRate(effectiveTokenId, 'outbound');
+    }
     const bridgingFee = calculateBridgingFee(amount, bridgingFeeRate);
 
     // Calculate EIBC fee if this is a RollApp withdrawal

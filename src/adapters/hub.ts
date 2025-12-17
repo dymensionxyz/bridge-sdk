@@ -77,9 +77,12 @@ export interface HubToEvmParams {
 export function populateHubToEvmTx(params: HubToEvmParams): MsgRemoteTransfer {
   const { tokenId, token, destination, recipient, amount, sender, igpFee } = params;
 
-  // Get token-specific IGP hook and denom
-  const customHookId = getIgpHookForToken(token);
+  // Get token-specific denom
   const igpDenom = getHubDenom(token);
+
+  // Only use IGP hook when we have a positive IGP fee
+  // When igpFee is 0, omit the hook to avoid "maxFee is required" validation error
+  const customHookId = igpFee > 0n ? getIgpHookForToken(token) : '';
 
   // Convert EVM address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = evmAddressToHyperlane(recipient);
@@ -164,9 +167,11 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
   // Convert Kaspa address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = kaspaAddressToHyperlane(kaspaRecipient);
 
-  // Get KAS-specific IGP hook and denom
-  const customHookId = getIgpHookForToken('KAS');
+  // Only use IGP hook when we have a positive IGP fee
+  // When igpFee is 0 (e.g., Kaspa domain not registered in IGP), omit the hook
+  // to avoid "maxFee is required" validation error
   const igpDenom = getHubDenom('KAS');
+  const customHookId = igpFee > 0n ? getIgpHookForToken('KAS') : '';
 
   return {
     typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
@@ -234,9 +239,12 @@ export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTrans
   // Convert Solana address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = solanaAddressToHyperlane(recipient);
 
-  // Get token-specific IGP hook and denom
-  const customHookId = getIgpHookForToken(token);
+  // Get token-specific denom
   const igpDenom = getHubDenom(token);
+
+  // Only use IGP hook when we have a positive IGP fee
+  // When igpFee is 0, omit the hook to avoid "maxFee is required" validation error
+  const customHookId = igpFee > 0n ? getIgpHookForToken(token) : '';
 
   return {
     typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
