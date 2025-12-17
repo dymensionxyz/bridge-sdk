@@ -2,6 +2,35 @@
 
 Programmatic bridging SDK for Dymension's Hyperlane integration. Enables developers and automated systems to construct bridge transactions without relying on the portal frontend.
 
+> **EXPERIMENTAL**: This SDK is in experimental release. See the test status table below for manually verified routes.
+
+## Test Status
+
+Manual testing status for each transfer route. Routes are marked as they are verified on mainnet.
+
+| Source | Destination | Route Type | Status | Notes |
+|--------|-------------|------------|--------|-------|
+| **Hub** | Hyperlane | Direct | :white_circle: | MsgRemoteTransfer |
+| **Hub** | IBC | Direct | :white_circle: | Standard IBC |
+| **EVM** | Hub | Direct | :white_circle: | |
+| **Solana** | Hub | Direct | :white_circle: | |
+| **Kaspa** | Hub | Direct | :white_circle: | Rust CLI for signing |
+| **IBC** | Hub | Direct | :white_circle: | Standard IBC |
+| **EVM** | Hyperlane | Via Hub | :white_circle: | HL forwarding |
+| **EVM** | IBC | Via Hub | :white_circle: | IBC forwarding |
+| **Solana** | Hyperlane | Via Hub | :white_circle: | HL forwarding |
+| **Solana** | IBC | Via Hub | :white_circle: | IBC forwarding |
+| **Kaspa** | Hyperlane | Via Hub | :white_circle: | HL forwarding |
+| **Kaspa** | IBC | Via Hub | :white_circle: | IBC forwarding |
+| **RollApp** | Hub | Direct | :white_circle: | EIBC withdrawal |
+| **RollApp** | Hyperlane | Via Hub | :white_circle: | EIBC + HL forward |
+| **IBC** | Hyperlane | Via Hub | :white_circle: | PFM + HL forward |
+
+**Hyperlane chains**: Ethereum, Base, BSC, Solana, Kaspa
+**IBC chains**: Osmosis, Cosmos Hub, Celestia, Noble
+
+**Legend:** :white_check_mark: Tested | :white_circle: Untested | :x: Known issue
+
 ## Features
 
 - **Multi-chain support**: Dymension Hub, Ethereum, Base, BSC, Solana, Kaspa
