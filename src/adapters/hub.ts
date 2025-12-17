@@ -84,6 +84,9 @@ export function populateHubToEvmTx(params: HubToEvmParams): MsgRemoteTransfer {
   // When igpFee is 0, omit the hook to avoid "maxFee is required" validation error
   const customHookId = igpFee > 0n ? getIgpHookForToken(token) : '';
 
+  // maxFee must be at least 1 - chain rejects amount=0 even without custom hook
+  const effectiveMaxFee = igpFee > 0n ? igpFee : 1n;
+
   // Convert EVM address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = evmAddressToHyperlane(recipient);
 
@@ -99,7 +102,7 @@ export function populateHubToEvmTx(params: HubToEvmParams): MsgRemoteTransfer {
       gasLimit: '0',
       maxFee: {
         denom: igpDenom,
-        amount: igpFee.toString(),
+        amount: effectiveMaxFee.toString(),
       },
       customHookMetadata: '',
     },
@@ -173,6 +176,9 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
   const igpDenom = getHubDenom('KAS');
   const customHookId = igpFee > 0n ? getIgpHookForToken('KAS') : '';
 
+  // maxFee must be at least 1 - chain rejects amount=0 even without custom hook
+  const effectiveMaxFee = igpFee > 0n ? igpFee : 1n;
+
   return {
     typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
     value: {
@@ -185,7 +191,7 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
       gasLimit: '0',
       maxFee: {
         denom: igpDenom,
-        amount: igpFee.toString(),
+        amount: effectiveMaxFee.toString(),
       },
       customHookMetadata: '',
     },
@@ -246,6 +252,9 @@ export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTrans
   // When igpFee is 0, omit the hook to avoid "maxFee is required" validation error
   const customHookId = igpFee > 0n ? getIgpHookForToken(token) : '';
 
+  // maxFee must be at least 1 - chain rejects amount=0 even without custom hook
+  const effectiveMaxFee = igpFee > 0n ? igpFee : 1n;
+
   return {
     typeUrl: '/hyperlane.warp.v1.MsgRemoteTransfer',
     value: {
@@ -258,7 +267,7 @@ export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTrans
       gasLimit: '0',
       maxFee: {
         denom: igpDenom,
-        amount: igpFee.toString(),
+        amount: effectiveMaxFee.toString(),
       },
       customHookMetadata: '',
     },
