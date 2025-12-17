@@ -481,12 +481,19 @@ export class BridgeClient {
       // Route to appropriate adapter based on destination chain
       if (to === 'kaspa') {
         // Query IGP fee for Kaspa destination
+        // Note: Kaspa domain may not be registered in the IGP (handled differently)
         const domain = getHyperlaneDomain(to, network);
-        const igpFee = await this.feeProvider.quoteIgpPayment({
-          destinationDomain: domain,
-          gasLimit: 200_000,
-          token: 'KAS',
-        });
+        let igpFee = 0n;
+        try {
+          igpFee = await this.feeProvider.quoteIgpPayment({
+            destinationDomain: domain,
+            gasLimit: 200_000,
+            token: 'KAS',
+          });
+        } catch {
+          // If IGP quote fails (domain not supported), use 0 - Kaspa handles gas differently
+          igpFee = 0n;
+        }
 
         const tx = await this.populateHubToKaspaTx({
           kaspaRecipient: recipient,
