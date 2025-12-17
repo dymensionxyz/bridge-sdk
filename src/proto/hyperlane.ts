@@ -118,13 +118,25 @@ export interface MsgRemoteTransferValue {
  */
 export const MsgRemoteTransferEncoder = {
   encode: (message: MsgRemoteTransferValue) => {
-    const converted = {
-      ...message,
+    // Build the message object, omitting customHookId entirely when empty
+    // This is important because Go's gogoproto.nullable=true treats an empty
+    // string field as present and tries to unmarshal it as HexAddress, failing.
+    const converted: Record<string, unknown> = {
+      sender: message.sender,
       tokenId: normalizeHexAddress(message.tokenId),
+      destinationDomain: message.destinationDomain,
       recipient: normalizeHexAddress(message.recipient),
-      customHookId: message.customHookId ? normalizeHexAddress(message.customHookId) : '',
+      amount: message.amount,
+      gasLimit: message.gasLimit,
+      maxFee: message.maxFee,
       customHookMetadata: message.customHookMetadata || '',
     };
+
+    // Only include customHookId if it has a value
+    if (message.customHookId) {
+      converted.customHookId = normalizeHexAddress(message.customHookId);
+    }
+
     return MsgRemoteTransferProto.encode(MsgRemoteTransferProto.create(converted));
   },
   decode: (bytes: Uint8Array) => {
