@@ -2,6 +2,42 @@
 
 Programmatic bridging SDK for Dymension's Hyperlane integration. Enables developers and automated systems to construct bridge transactions without relying on the portal frontend.
 
+> **EXPERIMENTAL**: This SDK is in experimental release. See the test status table below for manually verified routes.
+
+## Test Status
+
+Manual testing status for each transfer route. Routes are marked as they are verified on mainnet.
+
+| Source | Destination | Route Type | Status | Notes |
+|--------|-------------|------------|--------|-------|
+| **Hub** | EVM (ETH/Base/BSC) | Direct | :white_circle: | |
+| **Hub** | Solana | Direct (exempt) | :white_circle: | No IGP fee |
+| **Hub** | Kaspa | Direct (exempt) | :white_circle: | No IGP fee |
+| **Hub** | IBC (Osmosis/etc) | Direct | :white_circle: | Standard IBC |
+| **EVM** | Hub | Direct | :white_circle: | |
+| **Solana** | Hub | Direct | :white_circle: | |
+| **Kaspa** | Hub | Direct | :white_circle: | Uses Rust CLI |
+| **IBC** | Hub | Direct | :white_circle: | Standard IBC |
+| **EVM** | EVM | Via Hub | :white_circle: | HL forwarding |
+| **EVM** | Solana | Via Hub | :white_circle: | HL forwarding |
+| **EVM** | Kaspa | Via Hub | :white_circle: | HL forwarding |
+| **EVM** | IBC | Via Hub | :white_circle: | IBC forwarding |
+| **Solana** | EVM | Via Hub | :white_circle: | HL forwarding |
+| **Solana** | IBC | Via Hub | :white_circle: | IBC forwarding |
+| **Solana** | Kaspa | Via Hub | :white_circle: | HL forwarding |
+| **Kaspa** | EVM | Via Hub | :white_circle: | HL forwarding |
+| **Kaspa** | IBC | Via Hub | :white_circle: | IBC forwarding |
+| **Kaspa** | Solana | Via Hub | :white_circle: | HL forwarding |
+| **RollApp** | Hub | Direct | :white_circle: | EIBC withdrawal |
+| **RollApp** | EVM | Via Hub | :white_circle: | EIBC + HL forward |
+| **RollApp** | Solana | Via Hub | :white_circle: | EIBC + HL forward |
+| **RollApp** | Kaspa | Via Hub | :white_circle: | EIBC + HL forward |
+| **IBC** | EVM | Via Hub | :white_circle: | PFM + HL forward |
+| **IBC** | Solana | Via Hub | :white_circle: | PFM + HL forward |
+| **IBC** | Kaspa | Via Hub | :white_circle: | PFM + HL forward |
+
+**Legend:** :white_check_mark: Tested | :white_circle: Untested | :x: Known issue
+
 ## Features
 
 - **Multi-chain support**: Dymension Hub, Ethereum, Base, BSC, Solana, Kaspa
