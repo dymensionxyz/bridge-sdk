@@ -12,6 +12,7 @@ import { HUB_TOKEN_IDS, DOMAINS, HUB_IGP_HOOKS } from '../../config/constants.js
 describe('Hub Native Warp Module', () => {
   // Test IGP fee (would come from FeeProvider.quoteIgpPayment in production)
   const TEST_IGP_FEE = 100_000_000_000_000_000n;
+  const TEST_KAS_IGP_FEE = 1_000_000n; // 0.01 KAS
 
   describe('populateHubToEvmTx', () => {
     const params: HubToEvmParams = {
@@ -94,6 +95,7 @@ describe('Hub Native Warp Module', () => {
       sender: 'dym1testuser',
       kaspaRecipient: KASPA_MAINNET_ADDRESS,
       amount: 5_000_000_000n, // 50 KAS
+      igpFee: TEST_KAS_IGP_FEE,
     };
 
     it('should create a valid MsgRemoteTransfer', () => {
@@ -126,11 +128,12 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.recipient).toMatch(/^0x[0-9a-f]{64}$/);
     });
 
-    it('should have no IGP fee (exempt route)', () => {
+    it('should use KAS IGP hook and denom for maxFee', () => {
       const msg = populateHubToKaspaTx(params);
 
-      expect(msg.value.customHookId).toBe('');
-      expect(msg.value.maxFee.amount).toBe('0');
+      expect(msg.value.customHookId).toBe(HUB_IGP_HOOKS.KAS);
+      expect(msg.value.maxFee.denom).toBe('hyperlane/0x726f757465725f61707000000000000000000000000000020000000000000000');
+      expect(msg.value.maxFee.amount).toBe(TEST_KAS_IGP_FEE.toString());
     });
   });
 
@@ -140,9 +143,11 @@ describe('Hub Native Warp Module', () => {
 
     const params: HubToSolanaParams = {
       tokenId: HUB_TOKEN_IDS.DYM,
+      token: 'DYM',
       recipient: SOLANA_ADDRESS,
       amount: 1000000000n,
       sender: 'dym1testuser',
+      igpFee: TEST_IGP_FEE,
     };
 
     it('should create a valid MsgRemoteTransfer', () => {
@@ -171,11 +176,12 @@ describe('Hub Native Warp Module', () => {
       expect(msg.value.recipient).toMatch(/^0x[0-9a-f]{64}$/);
     });
 
-    it('should have no IGP fee (exempt route)', () => {
+    it('should use token-specific IGP hook and denom', () => {
       const msg = populateHubToSolanaTx(params);
 
-      expect(msg.value.customHookId).toBe('');
-      expect(msg.value.maxFee.amount).toBe('0');
+      expect(msg.value.customHookId).toBe(HUB_IGP_HOOKS.DYM);
+      expect(msg.value.maxFee.denom).toBe('adym');
+      expect(msg.value.maxFee.amount).toBe(TEST_IGP_FEE.toString());
     });
   });
 });
