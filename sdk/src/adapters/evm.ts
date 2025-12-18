@@ -18,6 +18,7 @@ export interface EvmToHubTransferParams {
   amount: bigint;
   sender: string;
   rpcUrl?: string;
+  network?: 'mainnet' | 'testnet';
 }
 
 /**
@@ -33,6 +34,7 @@ export interface EvmToHubWithForwardingParams {
   /** HLMetadata bytes for forwarding (use createHLMetadataForIBC or createHLMetadataForHL) */
   metadata: Uint8Array;
   rpcUrl?: string;
+  network?: 'mainnet' | 'testnet';
 }
 
 /**
@@ -86,7 +88,7 @@ function createProvider(chain: 'ethereum' | 'base' | 'bsc', rpcUrl?: string): pr
 export async function populateEvmToHubTransfer(
   params: EvmToHubTransferParams
 ): Promise<PopulatedTransaction> {
-  const { sourceChain, tokenAddress, recipient, amount, sender, rpcUrl } = params;
+  const { sourceChain, tokenAddress, recipient, amount, sender, rpcUrl, network = 'mainnet' } = params;
 
   // Validate recipient is a valid Cosmos address
   if (!recipient.startsWith('dym1')) {
@@ -96,8 +98,8 @@ export async function populateEvmToHubTransfer(
   // Convert Cosmos address to Hyperlane 32-byte format
   const recipientBytes32 = cosmosAddressToHyperlane(recipient);
 
-  // Get Hub domain ID (hardcoded to mainnet for now)
-  const hubDomain = getHubDomain('mainnet');
+  // Get Hub domain ID
+  const hubDomain = getHubDomain(network);
 
   // Create provider and contract instance
   const provider = createProvider(sourceChain, rpcUrl);
@@ -155,12 +157,13 @@ export function getEvmTokenContract(
 export async function estimateEvmToHubGas(
   sourceChain: 'ethereum' | 'base' | 'bsc',
   tokenAddress: string,
-  rpcUrl?: string
+  rpcUrl?: string,
+  network: 'mainnet' | 'testnet' = 'mainnet'
 ): Promise<bigint> {
   const provider = createProvider(sourceChain, rpcUrl);
   const contract = new Contract(tokenAddress, HYPER20_TRANSFER_REMOTE_ABI, provider);
 
-  const hubDomain = getHubDomain('mainnet');
+  const hubDomain = getHubDomain(network);
   const gasPayment = await contract.quoteGasPayment(hubDomain);
 
   return BigInt(gasPayment.toString());
@@ -181,7 +184,7 @@ export async function estimateEvmToHubGas(
 export async function populateEvmToHubWithForwarding(
   params: EvmToHubWithForwardingParams
 ): Promise<PopulatedTransaction> {
-  const { sourceChain, tokenAddress, hubRecipient, amount, sender, metadata, rpcUrl } = params;
+  const { sourceChain, tokenAddress, hubRecipient, amount, sender, metadata, rpcUrl, network = 'mainnet' } = params;
 
   // Validate recipient is a valid Cosmos address
   if (!hubRecipient.startsWith('dym1')) {
@@ -191,8 +194,8 @@ export async function populateEvmToHubWithForwarding(
   // Convert Cosmos address to Hyperlane 32-byte format
   const recipientBytes32 = cosmosAddressToHyperlane(hubRecipient);
 
-  // Get Hub domain ID (hardcoded to mainnet for now)
-  const hubDomain = getHubDomain('mainnet');
+  // Get Hub domain ID
+  const hubDomain = getHubDomain(network);
 
   // Create provider and contract instance with memo ABI
   const provider = createProvider(sourceChain, rpcUrl);

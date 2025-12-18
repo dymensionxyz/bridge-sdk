@@ -319,6 +319,8 @@ export class FeeProvider {
 
   /**
    * Fetch a specific fee hook by ID (x/bridgingfee)
+   *
+   * Returns null if the hook is not found (404). Throws on network errors.
    */
   async fetchFeeHook(hookId: string): Promise<HLFeeHook | null> {
     const cached = this.feeHooksCache.get(hookId);
@@ -326,21 +328,20 @@ export class FeeProvider {
       return cached.value;
     }
 
-    try {
-      const url = `${this.hubRestUrl}/dymensionxyz/dymension/bridgingfee/fee_hook/${hookId}`;
-      const response = await fetch(url);
+    const url = `${this.hubRestUrl}/dymensionxyz/dymension/bridgingfee/fee_hook/${hookId}`;
+    const response = await fetch(url);
 
-      if (!response.ok) {
+    if (!response.ok) {
+      if (response.status === 404) {
         return null;
       }
-
-      const data = await response.json();
-      const hook: HLFeeHook = data.fee_hook;
-      this.feeHooksCache.set(hookId, { value: hook, timestamp: Date.now() });
-      return hook;
-    } catch {
-      return null;
+      throw new Error(`fee hook query: status=${response.status}`);
     }
+
+    const data = await response.json();
+    const hook: HLFeeHook = data.fee_hook;
+    this.feeHooksCache.set(hookId, { value: hook, timestamp: Date.now() });
+    return hook;
   }
 
   /**

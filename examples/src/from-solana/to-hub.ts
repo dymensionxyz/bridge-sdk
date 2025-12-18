@@ -22,6 +22,7 @@ const HUB_RECIPIENT = env('HUB_RECIPIENT');
 const AMOUNT = env('AMOUNT');
 const TOKEN = env('TOKEN') as TokenSymbol;
 const SOLANA_RPC = env('SOLANA_RPC');
+const HUB_REST = env('HUB_REST');
 
 async function main() {
   // Decode the base58 private key
@@ -29,7 +30,9 @@ async function main() {
   const keypair = Keypair.fromSecretKey(secretKey);
   const sender = keypair.publicKey;
 
-  const client = createBridgeClient();
+  const client = createBridgeClient({
+    restUrls: { dymension: HUB_REST },
+  });
 
   // Estimate fees
   const fees = await client.estimateFees({

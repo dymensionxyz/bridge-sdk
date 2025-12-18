@@ -14,6 +14,7 @@ const HUB_MNEMONIC = env('HUB_MNEMONIC');
 const KASPA_RECIPIENT = env('KASPA_RECIPIENT');
 const AMOUNT = env('AMOUNT');
 const HUB_RPC = env('HUB_RPC');
+const HUB_REST = env('HUB_REST');
 
 async function main() {
   const wallet = await createDymWallet(HUB_MNEMONIC);
@@ -21,7 +22,9 @@ async function main() {
 
   console.log('Sender address:', sender);
 
-  const client = createBridgeClient();
+  const client = createBridgeClient({
+    restUrls: { dymension: HUB_REST },
+  });
 
   // Estimate fees (Hub to Kaspa is exempt from IGP)
   const fees = await client.estimateFees({

@@ -16,6 +16,7 @@ const SOLANA_RECIPIENT = env('SOLANA_RECIPIENT');
 const AMOUNT = env('AMOUNT');
 const TOKEN = env('TOKEN') as TokenSymbol;
 const HUB_RPC = env('HUB_RPC');
+const HUB_REST = env('HUB_REST');
 const NETWORK = env('NETWORK') as Network;
 
 async function main() {
@@ -24,7 +25,10 @@ async function main() {
 
   console.log('Sender address:', sender);
 
-  const client = createBridgeClient({ network: NETWORK });
+  const client = createBridgeClient({
+    network: NETWORK,
+    restUrls: { dymension: HUB_REST },
+  });
 
   // Estimate fees (Hub to Solana is exempt from IGP)
   const fees = await client.estimateFees({

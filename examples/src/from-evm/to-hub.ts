@@ -17,13 +17,16 @@ const AMOUNT = env('AMOUNT');
 const TOKEN = env('TOKEN') as TokenSymbol;
 const SOURCE_CHAIN = env('SOURCE_CHAIN') as ChainName;
 const RPC_URL = env('RPC_URL');
+const HUB_REST = env('HUB_REST');
 
 async function main() {
   const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
   const wallet = new ethers.Wallet(EVM_PRIVATE_KEY, provider);
   const sender = await wallet.getAddress();
 
-  const client = createBridgeClient();
+  const client = createBridgeClient({
+    restUrls: { dymension: HUB_REST },
+  });
 
   // Estimate fees
   const fees = await client.estimateFees({

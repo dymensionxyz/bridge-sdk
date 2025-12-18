@@ -11,6 +11,13 @@ export function env(name: string): string {
 }
 
 /**
+ * Get optional environment variable
+ */
+export function optionalEnv(name: string): string | undefined {
+  return process.env[name];
+}
+
+/**
  * Check if DRY_RUN mode is enabled
  */
 export function isDryRun(): boolean {
