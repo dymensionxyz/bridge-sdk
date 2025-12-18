@@ -60,13 +60,36 @@ src/
   from-evm/       # EVM -> Hub, Hub -> Kaspa/Solana
   from-solana/    # Solana -> Hub, Hub -> Kaspa/EVM
   shared/         # Shared utilities
+kaspa-sender/     # Rust CLI for sending Kaspa transactions
 ```
 
-## Kaspa-Specific
+## Kaspa Sender
 
-Kaspa deposits require a Rust CLI tool to send the actual Kaspa transaction. The SDK generates the Hyperlane payload, which you then include in a Kaspa transaction.
+Kaspa deposits require a Rust CLI tool to send the actual Kaspa transaction. The SDK generates the Hyperlane payload, which you then include in a Kaspa transaction using the `kaspa-sender` tool.
 
-See the [kaspa-sender](https://github.com/user/kaspa-sender) repository for the Rust CLI tool.
+### Building
+
+```bash
+cd kaspa-sender
+cargo build --release
+```
+
+### Usage
+
+```bash
+cargo run -- \
+  --wallet-secret "your-wallet-password" \
+  --amount 5000000000 \
+  --payload "03000000..." \
+  --escrow "kaspa:prztt2hd2txge07syjvhaz5j6l9ql6djhc9equela058rjm6vww0uwre5dulh" \
+  --network mainnet \
+  --rpc "wss://your-kaspa-node:17110"
+```
+
+Prerequisites:
+- Rust toolchain
+- A rusty-kaspa wallet file at `~/.kaspa/` (or use `--wallet-dir`)
+- Wallet has sufficient KAS balance
 
 ## Configuration
 
