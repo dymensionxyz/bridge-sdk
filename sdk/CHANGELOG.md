@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.10.0] - 2024-12-18
+
+### Changed
+
+- **BREAKING**: Remove secondary entry points (`./adapters`, `./forward`, `./fees`, `./config`) from package.json exports
+- All public API now through single main entry point for proper encapsulation
+- Add `DymensionBridgeConfig` type export for SDK configuration
+- Add `getTokenAddress` function export for token contract lookups
+
+### Migration
+
+If you were importing from secondary entry points:
+```typescript
+// Before (no longer works)
+import { populateEvmToHubTransfer } from '@dymension/bridge-sdk/adapters'
+
+// After (use BridgeClient instead)
+import { createBridgeClient } from '@dymension/bridge-sdk'
+const client = createBridgeClient({ restUrls: { dymension: HUB_REST } })
+const tx = await client.transfer({ ... })
+```
+
 ## [0.8.0] - 2024-12-16
 
 ### Fixed
