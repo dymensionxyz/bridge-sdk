@@ -6,7 +6,9 @@ import { describe, it, expect } from 'vitest';
 import { BridgeClient } from '../client.js';
 
 describe('BridgeClient High-Level Transfer', () => {
-  const client = new BridgeClient();
+  const client = new BridgeClient({
+    restUrls: { dymension: 'https://dymension-api.polkachu.com' },
+  });
 
   describe('transfer()', () => {
     describe('validation', () => {
