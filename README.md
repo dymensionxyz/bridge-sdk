@@ -1,6 +1,6 @@
 # Dymension Bridge SDK
 
-Programmatic bridging SDK for Dymension's Hyperlane integration. Enables developers and automated systems to construct bridge transactions without relying on the portal frontend.
+Programmatic bridging SDK for Dymension's Hyperlane integration. Enables developers and automated systems to construct bridge transactions without relying on the portal frontend. The SDK helps to construct transactions for dispatching to Dymension, Kaspa, EVM chains or Solana but does not send or sign them.
 
 > **EXPERIMENTAL**: This SDK is in experimental release.
 
@@ -8,14 +8,14 @@ Programmatic bridging SDK for Dymension's Hyperlane integration. Enables develop
 
 ```
 .
-├── sdk/          # The published SDK package (@daniel.dymension.xyz/bridge-sdk)
-├── examples/     # Usage examples
-└── README.md     # This file
+├── sdk/          # The published SDK package for importing in your project
+├── examples/     # Examples of importing and using the SDK
 ```
 
 ## Quick Links
 
-- **[SDK Documentation](./sdk/README.md)** - Full SDK documentation and API reference
+- **[SDK README](./sdk/README.md)** - Full SDK documentation and API reference
+- **[SDK Docs](https://dymensionxyz.github.io/bridge-sdk/)** - Full SDK documentation and API reference
 - **[Examples](./examples/)** - Working examples for all supported routes
 
 ## Installation
@@ -28,19 +28,21 @@ npm install @daniel.dymension.xyz/bridge-sdk
 
 | Source | Destination | Route Type | Status |
 |--------|-------------|------------|--------|
-| **Hub** | Kaspa | Direct | :white_check_mark: |
-| **Kaspa** | Hub | Direct | :white_check_mark: |
-| **Hub** | EVM | Direct | :white_circle: |
-| **Hub** | Solana | Direct | :white_circle: |
-| **EVM** | Hub | Direct | :white_circle: |
-| **Solana** | Hub | Direct | :white_circle: |
-| **EVM** | Hyperlane | Via Hub | :white_circle: |
-| **Solana** | Hyperlane | Via Hub | :white_circle: |
-| **Kaspa** | Hyperlane | Via Hub | :white_circle: |
+| Hub | Kaspa | Direct | :white_check_mark: (manually tested) |
+| Kaspa | Hub | Direct | :white_check_mark: (manually tested) |
+| Hub | EVM | Direct | ⚠️ (experimental) |
+| Hub | Solana | Direct | ⚠️ (experimental) |
+| Hub | IBC (inc rollapp) | Direct | ⚠️ (experimental) |
+| EVM | Hub | Direct | ⚠️ (experimental) |
+| Solana | Hub | Direct | ⚠️ (experimental) |
+| EVM | Hyperlane | Via Hub | ⚠️ (experimental) |
+| Solana | Hyperlane | Via Hub | ⚠️ (experimental) |
+| Kaspa | Hyperlane | Via Hub | ⚠️ (experimental) |
+| IBC | Hyperlane | Via Hub | ⚠️ (experimental) |
+| Rollapp | Hyperlane | Via Hub | ⚠️ (experimental) |
+| Rollapp | IBC | Via Hub | ⚠️ (experimental) |
 
 **Hyperlane chains**: Ethereum, Base, BSC, Solana, Kaspa
-
-**Legend:** :white_check_mark: Tested | :white_circle: Untested
 
 ## Quick Start
 

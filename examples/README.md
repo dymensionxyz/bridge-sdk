@@ -1,41 +1,5 @@
 # Dymension Bridge SDK Usage Examples
 
-Usage examples for bridging tokens across Dymension's Hyperlane integration.
-
-Uses [@daniel.dymension.xyz/bridge-sdk](https://www.npmjs.com/package/@daniel.dymension.xyz/bridge-sdk) from npm.
-
-## Examples Catalog
-
-### From Kaspa
-| Destination | Script | Status |
-|-------------|--------|--------|
-| Hub | `npm run kaspa:to-hub` | :white_check_mark: |
-| Hub -> EVM | `npm run kaspa:to-evm` | :white_circle: |
-| Hub -> Solana | `npm run kaspa:to-solana` | :white_circle: |
-
-### From Hub
-| Destination | Script | Status |
-|-------------|--------|--------|
-| Kaspa | `npm run hub:to-kaspa` | :white_check_mark: |
-| EVM (Ethereum/Base/BSC) | `npm run hub:to-evm` | :white_circle: |
-| Solana | `npm run hub:to-solana` | :white_circle: |
-
-### From EVM (Ethereum/Base/BSC)
-| Destination | Script | Status |
-|-------------|--------|--------|
-| Hub | `npm run evm:to-hub` | :white_circle: |
-| Hub -> Kaspa | `npm run evm:to-kaspa` | :white_circle: |
-| Hub -> Solana | `npm run evm:to-solana` | :white_circle: |
-
-### From Solana
-| Destination | Script | Status |
-|-------------|--------|--------|
-| Hub | `npm run solana:to-hub` | :white_circle: |
-| Hub -> Kaspa | `npm run solana:to-kaspa` | :white_circle: |
-| Hub -> EVM | `npm run solana:to-evm` | :white_circle: |
-
-**Legend:** :white_check_mark: Tested | :white_circle: Untested
-
 ## Setup
 
 ```bash

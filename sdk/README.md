@@ -1,4 +1,4 @@
-# @daniel.dymension.xyz/bridge-sdk
+# bridge-sdk
 
 Programmatic bridging SDK for Dymension's Hyperlane integration. Enables developers and automated systems to construct bridge transactions without relying on the portal frontend.
 
