@@ -6,11 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./adapters": "./dist/adapters/index.js",
-    "./forward": "./dist/forward/index.js",
-    "./fees": "./dist/fees/index.js",
-    "./config": "./dist/config/index.js"
+    ".": "./dist/index.js"
   },
   "files": [
     "dist",

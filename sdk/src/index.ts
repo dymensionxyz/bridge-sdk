@@ -18,6 +18,7 @@ export type { TransferParams, TransferResult } from './client.js';
 export type { ChainName, Network } from './config/chains.js';
 export type { TokenSymbol } from './config/tokens.js';
 export type { FeeBreakdown } from './fees/index.js';
+export type { DymensionBridgeConfig } from './config/types.js';
 
 // =============================================================================
 // CosmJS Integration
@@ -78,6 +79,7 @@ export { FeeProvider, createFeeProvider } from './fees/index.js';
 
 // Token utilities for validation and display
 export {
+  getTokenAddress,
   getTokenDecimals,
   isTokenAvailableOnChain,
 } from './config/tokens.js';
