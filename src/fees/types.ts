@@ -15,12 +15,6 @@ export interface FeeBreakdown {
   /** Interchain gas paymaster fee */
   igpFee: bigint;
 
-  /** Transaction fee on source chain */
-  txFee: bigint;
-
-  /** Total of all fees */
-  totalFees: bigint;
-
   /** Amount recipient will receive after fees */
   recipientReceives: bigint;
 }
