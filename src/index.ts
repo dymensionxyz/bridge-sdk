@@ -50,7 +50,6 @@ export type {
 // Registry lookups needed for memo construction
 export {
   getHyperlaneDomain,
-  getIBCChannelFromHub,
 } from './config/chains.js';
 
 export {

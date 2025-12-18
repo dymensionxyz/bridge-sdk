@@ -3,7 +3,8 @@
  */
 
 import { Contract, PopulatedTransaction, providers } from 'ethers';
-import { DOMAINS, ETHEREUM_CONTRACTS, BASE_CONTRACTS, BSC_CONTRACTS } from '../config/constants.js';
+import { ETHEREUM_CONTRACTS, BASE_CONTRACTS, BSC_CONTRACTS } from '../config/constants.js';
+import { getHyperlaneDomain } from '../config/chains.js';
 import { DEFAULT_RPC_URLS } from '../config/rpc.js';
 import { cosmosAddressToHyperlane } from '../utils/address.js';
 
@@ -54,7 +55,7 @@ const HYPER20_MEMO_ABI = [
  * Get Dymension Hub domain ID
  */
 function getHubDomain(network: 'mainnet' | 'testnet' = 'mainnet'): number {
-  return network === 'mainnet' ? DOMAINS.DYMENSION_MAINNET : DOMAINS.DYMENSION_TESTNET;
+  return getHyperlaneDomain('dymension', network);
 }
 
 /**

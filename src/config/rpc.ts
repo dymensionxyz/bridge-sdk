@@ -6,9 +6,6 @@
  * Default RPC URLs by chain name
  */
 export const DEFAULT_RPC_URLS: Record<string, string> = {
-  // Dymension Hub
-  dymension: 'https://rpc-dymension.mzonder.com:443',
-
   // Ethereum
   ethereum: 'https://eth.llamarpc.com',
 
@@ -21,18 +18,18 @@ export const DEFAULT_RPC_URLS: Record<string, string> = {
   // Solana
   solanamainnet: 'https://api.mainnet-beta.solana.com',
   solanatestnet: 'https://api.testnet.solana.com',
+
+  // NOTE: Dymension RPCs must be provided by the caller
 };
 
 /**
  * Default REST API URLs for Cosmos chains
+ * NOTE: Dymension REST URL must be provided by the caller via FeeProviderConfig.hubRestUrl
  */
-export const DEFAULT_REST_URLS: Record<string, string> = {
-  dymension: 'https://api-dymension.mzonder.com:443',
-};
+export const DEFAULT_REST_URLS: Record<string, string> = {};
 
 /**
  * Default gRPC URLs for Cosmos chains
+ * NOTE: Dymension gRPC URL must be provided by the caller
  */
-export const DEFAULT_GRPC_URLS: Record<string, string> = {
-  dymension: 'https://grpc-dymension.mzonder.com:443',
-};
+export const DEFAULT_GRPC_URLS: Record<string, string> = {};

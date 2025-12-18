@@ -6,7 +6,20 @@ export * from './tokens.js';
 
 import type { DymensionBridgeConfig, ResolvedConfig } from './types.js';
 import { DEFAULT_RPC_URLS, DEFAULT_REST_URLS, DEFAULT_GRPC_URLS } from './rpc.js';
-import { DOMAINS } from './constants.js';
+import { CHAINS, getHyperlaneDomain, type Network } from './chains.js';
+
+/**
+ * Build domain map from CHAINS for a given network
+ */
+function buildDomainMap(network: Network): Record<string, number> {
+  const domains: Record<string, number> = {};
+  for (const [name, config] of Object.entries(CHAINS)) {
+    if (config.type === 'hyperlane' || config.type === 'hub') {
+      domains[name.toUpperCase()] = getHyperlaneDomain(name as keyof typeof CHAINS, network);
+    }
+  }
+  return domains;
+}
 
 /**
  * Create a resolved configuration by merging defaults with user overrides
@@ -28,7 +41,7 @@ export function createConfig(userConfig: DymensionBridgeConfig = {}): ResolvedCo
       ...DEFAULT_GRPC_URLS,
       ...userConfig.grpcUrls,
     },
-    domains: DOMAINS,
+    domains: buildDomainMap(network),
     contractOverrides: userConfig.contractOverrides,
   };
 }
