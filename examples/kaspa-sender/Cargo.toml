@@ -1,0 +1,21 @@
+[package]
+name = "kaspa-sender"
+version = "0.1.0"
+edition = "2021"
+description = "Send Kaspa deposit transaction with Hyperlane payload"
+
+[dependencies]
+kaspa-wallet-core = { git = "https://github.com/kaspanet/rusty-kaspa", rev = "9ff5d0f" }
+kaspa-wallet-keys = { git = "https://github.com/kaspanet/rusty-kaspa", rev = "9ff5d0f" }
+kaspa-consensus-core = { git = "https://github.com/kaspanet/rusty-kaspa", rev = "9ff5d0f" }
+kaspa-addresses = { git = "https://github.com/kaspanet/rusty-kaspa", rev = "9ff5d0f" }
+kaspa-bip32 = { git = "https://github.com/kaspanet/rusty-kaspa", rev = "9ff5d0f" }
+kaspa-utils = { git = "https://github.com/kaspanet/rusty-kaspa", rev = "9ff5d0f" }
+kaspa-wrpc-client = { git = "https://github.com/kaspanet/rusty-kaspa", rev = "9ff5d0f" }
+workflow-core = "0.18"
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }
+hex = "0.4"
+eyre = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

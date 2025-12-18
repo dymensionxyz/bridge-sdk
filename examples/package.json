@@ -1,0 +1,38 @@
+{
+  "name": "bridge-sdk-examples",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Usage examples for Dymension Bridge SDK",
+  "type": "module",
+  "scripts": {
+    "evm:to-hub": "npx tsx src/from-evm/to-hub.ts",
+    "evm:to-kaspa": "npx tsx src/from-evm/to-kaspa.ts",
+    "evm:to-solana": "npx tsx src/from-evm/to-solana.ts",
+    "hub:to-evm": "npx tsx src/from-hub/to-evm.ts",
+    "hub:to-kaspa": "npx tsx src/from-hub/to-kaspa.ts",
+    "hub:to-solana": "npx tsx src/from-hub/to-solana.ts",
+    "kaspa:to-evm": "npx tsx src/from-kaspa/to-evm.ts",
+    "kaspa:to-hub": "npx tsx src/from-kaspa/to-hub.ts",
+    "kaspa:to-solana": "npx tsx src/from-kaspa/to-solana.ts",
+    "solana:to-evm": "npx tsx src/from-solana/to-evm.ts",
+    "solana:to-hub": "npx tsx src/from-solana/to-hub.ts",
+    "solana:to-kaspa": "npx tsx src/from-solana/to-kaspa.ts"
+  },
+  "dependencies": {
+    "@cosmjs/encoding": "^0.32.0",
+    "@cosmjs/proto-signing": "^0.32.0",
+    "@cosmjs/stargate": "^0.32.0",
+    "@daniel.dymension.xyz/bridge-sdk": "^0.9.8",
+    "@solana/web3.js": "^1.87.0",
+    "bs58": "^5.0.0",
+    "cosmjs-types": "^0.10.1",
+    "dotenv": "^16.3.0",
+    "ethers": "^5.7.0",
+    "protobufjs": "^7.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
