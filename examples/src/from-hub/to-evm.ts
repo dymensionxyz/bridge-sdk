@@ -17,6 +17,7 @@ const AMOUNT = env('AMOUNT');
 const TOKEN = env('TOKEN') as TokenSymbol;
 const DESTINATION = env('DESTINATION') as ChainName;
 const HUB_RPC = env('HUB_RPC');
+const HUB_REST = env('HUB_REST');
 
 async function main() {
   const wallet = await createDymWallet(HUB_MNEMONIC);
@@ -24,7 +25,9 @@ async function main() {
 
   console.log('Sender address:', sender);
 
-  const client = createBridgeClient();
+  const client = createBridgeClient({
+    restUrls: { dymension: HUB_REST },
+  });
 
   // Estimate fees
   const fees = await client.estimateFees({
