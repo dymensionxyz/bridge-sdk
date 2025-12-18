@@ -1,16 +1,12 @@
 {
   "name": "@daniel.dymension.xyz/bridge-sdk",
-  "version": "0.9.8",
+  "version": "0.10.0",
   "description": "Programmatic bridging SDK for Dymension Hyperlane integration",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./adapters": "./dist/adapters/index.js",
-    "./forward": "./dist/forward/index.js",
-    "./fees": "./dist/fees/index.js",
-    "./config": "./dist/config/index.js"
+    ".": "./dist/index.js"
   },
   "files": [
     "dist",
