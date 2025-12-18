@@ -677,15 +677,13 @@ export class BridgeClient {
     }
 
     // Fetch bridging fee rates
-    let hop1InboundBridgingFeeRate = 0;
-    let hop2OutboundBridgingFeeRate = 0;
+    let hop1InboundBridgingFeeRate: number;
+    let hop2OutboundBridgingFeeRate: number;
     try {
       hop1InboundBridgingFeeRate = await this.feeProvider.getBridgingFeeRate(tokenId, 'inbound');
       hop2OutboundBridgingFeeRate = await this.feeProvider.getBridgingFeeRate(tokenId, 'outbound');
-    } catch {
-      // Use defaults if fee hooks not found
-      hop1InboundBridgingFeeRate = 0.001;
-      hop2OutboundBridgingFeeRate = 0.001;
+    } catch (error) {
+      throw new Error(`Failed to fetch bridging fee rates for token ${tokenId}: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Calculate forwarding fees to get correct amounts
