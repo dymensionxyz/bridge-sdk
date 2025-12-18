@@ -2,7 +2,7 @@
 
 Programmatic bridging SDK for Dymension's Hyperlane integration. Enables developers and automated systems to construct bridge transactions without relying on the portal frontend. The SDK helps to construct transactions for dispatching to Dymension, Kaspa, EVM chains or Solana but does not send or sign them.
 
-> **EXPERIMENTAL**: This SDK is in experimental release.
+> **EXPERIMENTAL**: This SDK is in experimental release. Contributions are welcome.
 
 ## Repository Structure
 
@@ -14,7 +14,7 @@ Programmatic bridging SDK for Dymension's Hyperlane integration. Enables develop
 
 ## Quick Links
 
-- **[SDK README](./sdk/README.md)** - Full SDK documentation and API reference
+- **[SDK README](./sdk/USAGE.md)** - General usage info
 - **[SDK Docs](https://dymensionxyz.github.io/bridge-sdk/)** - Full SDK documentation and API reference
 - **[Examples](./examples/)** - Working examples for all supported routes
 
@@ -52,7 +52,7 @@ import { createBridgeClient, getHyperlaneDomain, HUB_TOKEN_IDS } from '@daniel.d
 // Create client - requires Hub REST URL for fee queries
 const client = createBridgeClient({
   restUrls: {
-    dymension: 'https://dymension-api.polkachu.com',
+    dymension: 'https://dymension-api.myserver.com',
   },
 });
 

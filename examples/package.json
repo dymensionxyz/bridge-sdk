@@ -22,7 +22,7 @@
     "@cosmjs/encoding": "^0.32.0",
     "@cosmjs/proto-signing": "^0.32.0",
     "@cosmjs/stargate": "^0.32.0",
-    "@daniel.dymension.xyz/bridge-sdk": "^0.10.0",
+    "@daniel.dymension.xyz/bridge-sdk": "^0.10.1",
     "@solana/web3.js": "^1.87.0",
     "bs58": "^5.0.0",
     "cosmjs-types": "^0.10.1",
