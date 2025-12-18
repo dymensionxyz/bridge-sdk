@@ -122,6 +122,38 @@ export function isValidHyperlaneAddress(hex: string): boolean {
 }
 
 /**
+ * Convert bech32 5-bit values to 8-bit bytes (BIP-173 algorithm)
+ */
+function convertBits(data: number[], fromBits: number, toBits: number, pad: boolean): number[] | null {
+  let acc = 0;
+  let bits = 0;
+  const result: number[] = [];
+  const maxv = (1 << toBits) - 1;
+
+  for (const value of data) {
+    if (value < 0 || (value >> fromBits) !== 0) {
+      return null;
+    }
+    acc = (acc << fromBits) | value;
+    bits += fromBits;
+    while (bits >= toBits) {
+      bits -= toBits;
+      result.push((acc >> bits) & maxv);
+    }
+  }
+
+  if (pad) {
+    if (bits > 0) {
+      result.push((acc << (toBits - bits)) & maxv);
+    }
+  } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv) !== 0) {
+    return null;
+  }
+
+  return result;
+}
+
+/**
  * Convert a Kaspa address to Hyperlane 32-byte hex format
  *
  * Kaspa addresses use bech32m encoding with a 32-byte schnorr public key payload.
@@ -157,27 +189,17 @@ export function kaspaAddressToHyperlane(kaspaAddress: string): string {
     values.push(idx);
   }
 
-  // First value is the version byte, skip it
-  // Convert remaining 5-bit groups to 8-bit bytes
-  const bytes: number[] = [];
-  let acc = 0;
-  let bitCount = 0;
-
-  for (let i = 1; i < values.length; i++) {
-    acc = (acc << 5) | values[i];
-    bitCount += 5;
-    while (bitCount >= 8) {
-      bitCount -= 8;
-      bytes.push((acc >> bitCount) & 0xff);
-    }
+  // Convert all 5-bit values to 8-bit bytes using BIP-173 algorithm
+  // The first byte after conversion is the version/type byte, remaining 32 bytes are the payload
+  const converted = convertBits(values, 5, 8, false);
+  if (!converted || converted.length !== 33) {
+    throw new Error(`Invalid Kaspa address: expected 33 bytes after conversion, got ${converted?.length ?? 0}`);
   }
 
-  // Discard any remaining bits (padding)
-  if (bytes.length !== 32) {
-    throw new Error(`Invalid Kaspa address: expected 32-byte pubkey, got ${bytes.length}`);
-  }
+  // Skip the version byte (first byte), take the 32-byte payload
+  const payload = converted.slice(1);
 
-  return '0x' + bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return '0x' + payload.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**

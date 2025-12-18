@@ -190,14 +190,13 @@ describe('Address Conversion Utilities', () => {
   });
 
   describe('kaspaAddressToHyperlane', () => {
-    it('converts Kaspa testnet address to 32-byte format', () => {
+    it('converts Kaspa testnet address matching Rust kaspa-tools output', () => {
       // Use the address from the Rust roundtrip test
+      // Verified via: cargo run -p kaspa-tools -- recipient kaspatest:qzlq49spp66vkjjex0w7z8708f6zteqwr6swy33fmy4za866ne90vhy54uh3j
       const kaspaAddress = 'kaspatest:qzlq49spp66vkjjex0w7z8708f6zteqwr6swy33fmy4za866ne90vhy54uh3j';
       const result = kaspaAddressToHyperlane(kaspaAddress);
-      // Verify format
-      expect(result.startsWith('0x')).toBe(true);
-      expect(result.length).toBe(66); // 0x + 64 hex chars
-      // The value can be verified via Rust roundtrip
+      // This is the exact output from the Rust kaspa-tools recipient command
+      expect(result).toBe('0xbe0a96010eb4cb4a5933dde11fcf3a7425e40e1ea0e24629d92a2e9f5a9e4af6');
     });
 
     it('handles mainnet escrow address', () => {
