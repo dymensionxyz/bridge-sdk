@@ -1,5 +1,7 @@
 # Dymension Bridge SDK
 
+⚠️ **EXPERIMENTAL** ⚠️ : This SDK is in experimental release. 💚 Contributions are welcome. 💚
+
 Programmatic bridging SDK for Dymension's Hyperlane integration. Enables developers and automated systems to construct bridge transactions without relying on the portal frontend. The SDK helps to construct transactions for dispatching to Dymension, Kaspa, EVM chains or Solana but does not send or sign them.
 
 > **EXPERIMENTAL**: This SDK is in experimental release. Contributions are welcome.
