@@ -2,24 +2,6 @@
  * Hardcoded constants for Dymension bridging
  */
 
-import { getHyperlaneDomain } from './chains.js';
-
-/**
- * Hyperlane domain IDs for supported chains
- * @deprecated Use getHyperlaneDomain() instead
- */
-export const DOMAINS = {
-  DYMENSION_MAINNET: getHyperlaneDomain('dymension', 'mainnet'),
-  DYMENSION_TESTNET: getHyperlaneDomain('dymension', 'testnet'),
-  KASPA_MAINNET: getHyperlaneDomain('kaspa', 'mainnet'),
-  KASPA_TESTNET: getHyperlaneDomain('kaspa', 'testnet'),
-  ETHEREUM: getHyperlaneDomain('ethereum', 'mainnet'),
-  BASE: getHyperlaneDomain('base', 'mainnet'),
-  BSC: getHyperlaneDomain('bsc', 'mainnet'),
-  SOLANA_MAINNET: getHyperlaneDomain('solana', 'mainnet'),
-  SOLANA_TESTNET: getHyperlaneDomain('solana', 'testnet'),
-} as const;
-
 /**
  * Hub warp token IDs (32-byte hex)
  */

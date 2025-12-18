@@ -1,13 +1,12 @@
 /**
- * Chain registry with IBC channels and Hyperlane domains
+ * Chain registry with Hyperlane domains
  *
- * This module provides a unified registry of all supported chains,
- * including their IBC channels (for Cosmos chains) and Hyperlane
- * domain IDs (for EVM/Solana/Kaspa chains).
+ * This module provides a unified registry of all supported chains
+ * with their Hyperlane domain IDs.
  */
 
 /** Chain type identifier */
-export type ChainType = 'hyperlane' | 'ibc' | 'hub';
+export type ChainType = 'hyperlane' | 'hub';
 
 /** Network variant */
 export type Network = 'mainnet' | 'testnet';
@@ -29,19 +28,6 @@ export interface HyperlaneChainConfig extends BaseChainConfig {
   testnetDomain?: number;
 }
 
-/** IBC-connected chain configuration */
-export interface IBCChainConfig extends BaseChainConfig {
-  type: 'ibc';
-  /** IBC channel from Dymension to this chain */
-  channelFromHub: string;
-  /** IBC channel from this chain to Dymension */
-  channelToHub: string;
-  /** Chain ID */
-  chainId: string;
-  /** Testnet chain ID */
-  testnetChainId?: string;
-}
-
 /** Hub chain configuration */
 export interface HubChainConfig extends BaseChainConfig {
   type: 'hub';
@@ -55,12 +41,11 @@ export interface HubChainConfig extends BaseChainConfig {
   testnetChainId: string;
 }
 
-export type ChainConfig = HyperlaneChainConfig | IBCChainConfig | HubChainConfig;
+export type ChainConfig = HyperlaneChainConfig | HubChainConfig;
 
 /**
  * Registry of all supported chains
  *
- * IBC channels are from Dymension Hub's perspective.
  * Hyperlane domains are canonical domain IDs.
  */
 export const CHAINS = {
@@ -81,6 +66,7 @@ export const CHAINS = {
     displayName: 'Ethereum',
     addressPrefix: '0x',
     domain: 1,
+    testnetDomain: 11155111, // Sepolia
   },
   base: {
     type: 'hyperlane',
@@ -108,43 +94,6 @@ export const CHAINS = {
     domain: 1082673309,
     testnetDomain: 80808082,
   },
-
-  // === IBC chains ===
-  osmosis: {
-    type: 'ibc',
-    displayName: 'Osmosis',
-    addressPrefix: 'osmo',
-    channelFromHub: 'channel-2',
-    channelToHub: 'channel-19774',
-    chainId: 'osmosis-1',
-    testnetChainId: 'osmo-test-5',
-  },
-  cosmoshub: {
-    type: 'ibc',
-    displayName: 'Cosmos Hub',
-    addressPrefix: 'cosmos',
-    channelFromHub: 'channel-1',
-    channelToHub: 'channel-794',
-    chainId: 'cosmoshub-4',
-  },
-  celestia: {
-    type: 'ibc',
-    displayName: 'Celestia',
-    addressPrefix: 'celestia',
-    channelFromHub: 'channel-4',
-    channelToHub: 'channel-27',
-    chainId: 'celestia',
-    testnetChainId: 'mocha-4',
-  },
-  noble: {
-    type: 'ibc',
-    displayName: 'Noble',
-    addressPrefix: 'noble',
-    channelFromHub: 'channel-6',
-    channelToHub: 'channel-62',
-    chainId: 'noble-1',
-    testnetChainId: 'grand-1',
-  },
 } as const satisfies Record<string, ChainConfig>;
 
 export type ChainName = keyof typeof CHAINS;
@@ -165,35 +114,10 @@ export function getChainConfig<T extends ChainName>(name: T): (typeof CHAINS)[T]
  */
 export function getHyperlaneDomain(name: ChainName, network: Network = 'mainnet'): number {
   const config = CHAINS[name];
-  if (config.type === 'ibc') {
-    throw new Error(`Chain ${name} is an IBC chain, not a Hyperlane chain`);
-  }
   if (network === 'testnet' && 'testnetDomain' in config && config.testnetDomain) {
     return config.testnetDomain;
   }
   return config.domain;
-}
-
-/**
- * Get IBC channel from Hub to a destination chain
- */
-export function getIBCChannelFromHub(destination: ChainName): string {
-  const config = CHAINS[destination];
-  if (config.type !== 'ibc') {
-    throw new Error(`Chain ${destination} is not an IBC chain`);
-  }
-  return config.channelFromHub;
-}
-
-/**
- * Get IBC channel from a source chain to Hub
- */
-export function getIBCChannelToHub(source: ChainName): string {
-  const config = CHAINS[source];
-  if (config.type !== 'ibc') {
-    throw new Error(`Chain ${source} is not an IBC chain`);
-  }
-  return config.channelToHub;
 }
 
 /**
@@ -202,13 +126,6 @@ export function getIBCChannelToHub(source: ChainName): string {
 export function isHyperlaneChain(name: ChainName): boolean {
   const config = CHAINS[name];
   return config.type === 'hyperlane' || config.type === 'hub';
-}
-
-/**
- * Check if a chain is connected via IBC
- */
-export function isIBCChain(name: ChainName): boolean {
-  return CHAINS[name].type === 'ibc';
 }
 
 /**
@@ -225,11 +142,4 @@ export function getHyperlaneChainNames(): ChainName[] {
   return getAllChainNames().filter(
     (name) => CHAINS[name].type === 'hyperlane' || CHAINS[name].type === 'hub'
   );
-}
-
-/**
- * Get all IBC chain names
- */
-export function getIBCChainNames(): ChainName[] {
-  return getAllChainNames().filter((name) => CHAINS[name].type === 'ibc');
 }

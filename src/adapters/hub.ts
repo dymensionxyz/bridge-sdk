@@ -6,7 +6,8 @@
  */
 
 import type { Coin } from '@cosmjs/stargate';
-import { DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { HUB_TOKEN_IDS } from '../config/constants.js';
+import { getHyperlaneDomain } from '../config/chains.js';
 import { getHubDenom, getIgpHookForToken, type TokenSymbol } from '../config/tokens.js';
 import { evmAddressToHyperlane, kaspaAddressToHyperlane, solanaAddressToHyperlane } from '../utils/address.js';
 
@@ -163,9 +164,7 @@ export function populateHubToKaspaTx(params: HubToKaspaParams): MsgRemoteTransfe
     igpFee,
   } = params;
 
-  const destinationDomain = network === 'mainnet'
-    ? DOMAINS.KASPA_MAINNET
-    : DOMAINS.KASPA_TESTNET;
+  const destinationDomain = getHyperlaneDomain('kaspa', network);
 
   // Convert Kaspa address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = kaspaAddressToHyperlane(kaspaRecipient);
@@ -238,9 +237,7 @@ export function populateHubToSolanaTx(params: HubToSolanaParams): MsgRemoteTrans
     igpFee,
   } = params;
 
-  const destinationDomain = network === 'mainnet'
-    ? DOMAINS.SOLANA_MAINNET
-    : DOMAINS.SOLANA_TESTNET;
+  const destinationDomain = getHyperlaneDomain('solana', network);
 
   // Convert Solana address to 32-byte hex (with 0x prefix - HexAddress is encoded as string)
   const recipientHex = solanaAddressToHyperlane(recipient);

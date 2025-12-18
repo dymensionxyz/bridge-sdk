@@ -5,23 +5,13 @@
 import { getIgpHookForToken, type TokenSymbol } from '../config/tokens.js';
 
 /**
- * Default Hub REST endpoints
- */
-export const HUB_REST_ENDPOINTS = {
-  mainnet: 'https://dymension-rest.publicnode.com',
-  testnet: 'https://dymension-testnet-rest.publicnode.com',
-} as const;
-
-/**
  * Configuration for FeeProvider
  */
 export interface FeeProviderConfig {
-  /** Hub REST URL (defaults to public mainnet endpoint) */
-  hubRestUrl?: string;
+  /** Hub REST URL - REQUIRED, caller must provide */
+  hubRestUrl: string;
   /** Cache TTL in milliseconds (defaults to 60000 = 1 minute) */
   cacheMs?: number;
-  /** Network (mainnet or testnet) */
-  network?: 'mainnet' | 'testnet';
 }
 
 /**
@@ -97,9 +87,8 @@ export class FeeProvider {
   private readonly igpQuoteCache: Map<string, CachedValue<bigint>> = new Map();
   private delayedAckParamsCache: CachedValue<DelayedAckParams> | null = null;
 
-  constructor(config: FeeProviderConfig = {}) {
-    const network = config.network ?? 'mainnet';
-    this.hubRestUrl = config.hubRestUrl ?? HUB_REST_ENDPOINTS[network];
+  constructor(config: FeeProviderConfig) {
+    this.hubRestUrl = config.hubRestUrl;
     this.cacheMs = config.cacheMs ?? 60_000;
   }
 
@@ -368,6 +357,6 @@ export class FeeProvider {
 /**
  * Create a FeeProvider instance
  */
-export function createFeeProvider(config?: FeeProviderConfig): FeeProvider {
+export function createFeeProvider(config: FeeProviderConfig): FeeProvider {
   return new FeeProvider(config);
 }

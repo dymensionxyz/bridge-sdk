@@ -5,7 +5,8 @@
  * that the user must include in their Kaspa transaction to the escrow address.
  */
 
-import { KASPA, DOMAINS, HUB_TOKEN_IDS } from '../config/constants.js';
+import { KASPA, HUB_TOKEN_IDS } from '../config/constants.js';
+import { getHyperlaneDomain } from '../config/chains.js';
 import { cosmosAddressToHyperlane, hexToBytes } from '../utils/index.js';
 import {
   encodeHLMetadata,
@@ -57,8 +58,8 @@ export function serializeKaspaDepositPayload(params: KaspaDepositParams): Uint8A
     throw new Error('Cannot specify both forwardToHyperlane and forwardToIbc');
   }
 
-  const hubDomain = network === 'mainnet' ? DOMAINS.DYMENSION_MAINNET : DOMAINS.DYMENSION_TESTNET;
-  const kaspaDomain = network === 'mainnet' ? DOMAINS.KASPA_MAINNET : DOMAINS.KASPA_TESTNET;
+  const hubDomain = getHyperlaneDomain('dymension', network);
+  const kaspaDomain = getHyperlaneDomain('kaspa', network);
 
   const recipientH256 = cosmosAddressToHyperlane(hubRecipient);
   const metadata = serializeHlMetadata(forwardToHyperlane, forwardToIbc);
