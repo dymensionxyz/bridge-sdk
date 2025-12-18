@@ -47,7 +47,7 @@ npm install @daniel.dymension.xyz/bridge-sdk
 ## Quick Start
 
 ```typescript
-import { createBridgeClient, getHyperlaneDomain, HUB_TOKEN_IDS } from '@daniel.dymension.xyz/bridge-sdk';
+import { createBridgeClient } from '@daniel.dymension.xyz/bridge-sdk';
 
 // Create client - requires Hub REST URL for fee queries
 const client = createBridgeClient({
@@ -66,7 +66,7 @@ const result = await client.transfer({
   sender: 'dym1...',
 });
 
-// Sign with CosmJS and broadcast
+// Sign result.tx with CosmJS and broadcast
 ```
 
 ## Development

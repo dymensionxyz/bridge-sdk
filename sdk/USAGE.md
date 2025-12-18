@@ -19,7 +19,7 @@ npm install @daniel.dymension.xyz/bridge-sdk
 ## Quick Start
 
 ```typescript
-import { createBridgeClient, getHyperlaneDomain, HUB_TOKEN_IDS } from '@daniel.dymension.xyz/bridge-sdk';
+import { createBridgeClient } from '@daniel.dymension.xyz/bridge-sdk';
 
 // Create client - requires Hub REST URL for fee queries
 const client = createBridgeClient({
@@ -36,18 +36,17 @@ const fees = await client.estimateFees({
   token: 'DYM',
 });
 
-// Create unsigned transaction (Hub -> Ethereum)
-const tx = await client.populateHubToEvmTx({
-  tokenId: HUB_TOKEN_IDS.DYM,
+// Create unsigned transaction using high-level API
+const result = await client.transfer({
+  from: 'dymension',
+  to: 'ethereum',
   token: 'DYM',
-  destination: getHyperlaneDomain('ethereum'),
   recipient: '0x742d35Cc6634C0532925a3b844Bc9e7595f...',
   amount: 10_000_000_000_000_000_000n,
   sender: 'dym1...',
-  igpFee: fees.igpFee,
 });
 
-// Sign with your wallet and broadcast
+// Sign result.tx with CosmJS and broadcast
 ```
 
 ## Supported Routes
@@ -56,12 +55,12 @@ const tx = await client.populateHubToEvmTx({
 
 | Source | Destination | Method |
 |--------|-------------|--------|
-| Hub | EVM (Ethereum, Base, BSC) | `populateHubToEvmTx()` or `transfer()` |
-| Hub | Solana | `populateHubToSolanaTx()` or `transfer()` |
-| Hub | Kaspa | `populateHubToKaspaTx()` or `transfer()` |
-| EVM (Ethereum, Base, BSC) | Hub | `populateEvmToHubTx()` or `transfer()` |
-| Solana | Hub | `populateSolanaToHubTx()` or `transfer()` |
-| Kaspa | Hub | `createKaspaDepositPayload()` |
+| Hub | EVM (Ethereum, Base, BSC) | `transfer()` |
+| Hub | Solana | `transfer()` |
+| Hub | Kaspa | `transfer()` |
+| EVM (Ethereum, Base, BSC) | Hub | `transfer()` |
+| Solana | Hub | `transfer()` |
+| Kaspa | Hub | `serializeKaspaDepositPayload()` + external signing |
 
 ### Forwarding Routes (via Hub)
 
