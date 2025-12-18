@@ -88,3 +88,9 @@ export const HUB_IGP_HOOKS = {
 
 export type IgpTokenSymbol = keyof typeof HUB_IGP_HOOKS;
 
+/**
+ * Default gas limit for IGP (Interchain Gas Paymaster) calculations.
+ * Used when estimating fees for Hyperlane cross-chain transfers.
+ */
+export const DEFAULT_IGP_GAS_LIMIT = 200_000;
+

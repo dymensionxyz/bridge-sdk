@@ -35,6 +35,7 @@ import {
 } from './config/tokens.js';
 import { createHLMetadataForHL } from './forward/index.js';
 import { addressToHyperlane } from './utils/index.js';
+import { DEFAULT_IGP_GAS_LIMIT } from './config/constants.js';
 
 /**
  * Parameters for Hub to EVM chain transfers
@@ -357,7 +358,7 @@ export class BridgeClient {
     const destConfig = getChainConfig(destination as ChainName);
     if ((destConfig.type === 'hyperlane' || destConfig.type === 'hub') && token) {
       const domain = getHyperlaneDomain(destination as ChainName, network);
-      const effectiveGasLimit = gasLimit ?? 200_000;
+      const effectiveGasLimit = gasLimit ?? DEFAULT_IGP_GAS_LIMIT;
       // Use the appropriate token for IGP (KAS for Kaspa destination)
       const igpToken = destination === 'kaspa' ? 'KAS' : token;
       try {
@@ -495,7 +496,7 @@ export class BridgeClient {
         try {
           igpFee = await this.feeProvider.quoteIgpPayment({
             destinationDomain: domain,
-            gasLimit: 200_000,
+            gasLimit: DEFAULT_IGP_GAS_LIMIT,
             token: 'KAS',
           });
         } catch {
@@ -523,7 +524,7 @@ export class BridgeClient {
         try {
           igpFee = await this.feeProvider.quoteIgpPayment({
             destinationDomain: domain,
-            gasLimit: 200_000,
+            gasLimit: DEFAULT_IGP_GAS_LIMIT,
             token,
           });
         } catch {
@@ -550,7 +551,7 @@ export class BridgeClient {
       const domain = getHyperlaneDomain(to, network);
       const igpFee = await this.feeProvider.quoteIgpPayment({
         destinationDomain: domain,
-        gasLimit: 200_000,
+        gasLimit: DEFAULT_IGP_GAS_LIMIT,
         token,
       });
 
@@ -668,7 +669,7 @@ export class BridgeClient {
     try {
       hop2IgpFee = await this.feeProvider.quoteIgpPayment({
         destinationDomain: destDomain,
-        gasLimit: 200_000,
+        gasLimit: DEFAULT_IGP_GAS_LIMIT,
         token: igpToken,
       });
     } catch {
